@@ -33,7 +33,7 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 /* title */
 .logo{text-align:center;margin-bottom:34px}
 .logo .kicker{font-size:.8rem;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;opacity:.85}
-.logo h1{font-size:clamp(3.4rem,13vw,8.5rem);line-height:.85;background:linear-gradient(180deg,#fff3e2 10%,#ffb46b 55%,#c2410c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(255,106,43,.35))}
+.logo h1{font-size:clamp(3.4rem,13vw,8.5rem);line-height:1;padding-top:.08em;background:linear-gradient(180deg,#fff3e2 10%,#ffb46b 55%,#c2410c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(255,106,43,.35))}
 .logo .sub{font-family:"Bebas Neue";font-size:clamp(1.3rem,4vw,2rem);letter-spacing:.6em;color:#d8cbbd;margin-top:6px;padding-left:.6em}
 .menu{display:flex;flex-direction:column;gap:10px;width:min(320px,100%)}
 .menu .btn{width:100%;padding:1em}
@@ -149,7 +149,8 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 @media (max-width:900px){
  html,body{overflow:auto}
  .game{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}
- .mapwrap{height:52vh;min-height:280px}
+ .mapwrap{height:auto;min-height:0}.mapwrap canvas{height:min(48vh,92vw)}#secinfo{position:static!important;padding:0 10px 10px}#secinfo .card{max-width:none!important;display:block!important}
+ .actcard{order:-1}
  .side{overflow:visible}
  .detail{grid-template-columns:84px 1fr}.detail img,.detail canvas{width:84px!important;height:105px!important}
  .grid16{grid-template-columns:repeat(4,1fr);gap:6px}
@@ -1288,7 +1289,7 @@ function renderGame() {
   const acts = [['explore', '🔎', 'Explorar', 'Buscar cosas y problemas'], ['hunt', '🍖', 'Cazar', 'Conseguir comida'], ['rest', '💤', 'Descansar', 'Curarse, más expuesto'], ['hide', '🌿', 'Esconderse', 'Casi no te encuentran']];
   $('#side').innerHTML = `${whoCard(G.P, `<div class="meter hu" style="margin-top:8px"><i style="width:${G.hunger}%"></i></div><div class="ml"><span>🍖 Saciedad ${G.hunger}</span><span>${G.hunger < 25 ? '<b style="color:#ffc94a">¡Hambre!</b>' : ''}</span></div>`)}
   ${whoCard(G.C, cAlive ? `<div class="meter lo" style="margin-top:8px"><i style="width:${G.loyalty}%"></i></div><div class="ml"><span>🤝 Lealtad ${G.loyalty}</span><span>${G.loyalty < 30 ? '<b style="color:#ff6b5b">Desconfía</b>' : G.loyalty > 75 ? 'Te banca' : ''}</span></div>` : `<div class="ml"><span>☠ Murió el día ${G.C.diedDay} · ${esc(G.C.killer)}</span></div>`)}
-  <div class="card"><div class="sectitle">¿Qué hacés? ${busy ? '' : '<span style="color:var(--ember);text-transform:none;letter-spacing:0">· o tocá un sector vecino para moverte</span>'}</div><div class="acts">${acts.map(([k, ic, n, d]) => `<button class="btn" data-a="${k}" ${busy ? 'disabled' : ''} title="${d}"><span class="ic">${ic}</span>${n}<small>${d}</small></button>`).join('')}
+  <div class="card actcard"><div class="sectitle">¿Qué hacés? ${busy ? '' : '<span style="color:var(--ember);text-transform:none;letter-spacing:0">· o tocá un sector vecino para moverte</span>'}</div><div class="acts">${acts.map(([k, ic, n, d]) => `<button class="btn" data-a="${k}" ${busy ? 'disabled' : ''} title="${d}"><span class="ic">${ic}</span>${n}<small>${d}</small></button>`).join('')}
   ${cAlive ? `<button class="btn danger" data-a="betray" ${busy ? 'disabled' : ''} style="grid-column:1/-1;padding:.55em"><span>🗡️ Traicionar a ${cap(G.C.name)}</span></button>` : ''}</div></div>
   <div class="card"><div class="sectitle">Mochila ${G.inv.length}/10</div><div class="inv">${Array.from({ length: 8 }, (_, i) => { const ks = [...new Set(G.inv)], k = ks[i]; return k ? `<div class="slot f" data-it="${k}">${ITEMS[k].ic}<span class="q">${G.inv.filter(x => x === k).length}</span></div>` : '<div class="slot"></div>'; }).join('')}</div></div>
   <div class="card"><div class="sectitle">Lo que pasa en la arena</div><div class="log">${G.log.slice(0, 40).map(l => `<p class="${l.cls || ''}"><span class="mut">D${l.d}</span> ${l.html}</p>`).join('') || '<p class="mut">Silencio. Demasiado.</p>'}</div></div>`;

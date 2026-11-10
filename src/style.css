@@ -24,7 +24,7 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 /* title */
 .logo{text-align:center;margin-bottom:34px}
 .logo .kicker{font-size:.8rem;letter-spacing:.5em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;opacity:.85}
-.logo h1{font-size:clamp(3.4rem,13vw,8.5rem);line-height:.85;background:linear-gradient(180deg,#fff3e2 10%,#ffb46b 55%,#c2410c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(255,106,43,.35))}
+.logo h1{font-size:clamp(3.4rem,13vw,8.5rem);line-height:1;padding-top:.08em;background:linear-gradient(180deg,#fff3e2 10%,#ffb46b 55%,#c2410c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(255,106,43,.35))}
 .logo .sub{font-family:"Bebas Neue";font-size:clamp(1.3rem,4vw,2rem);letter-spacing:.6em;color:#d8cbbd;margin-top:6px;padding-left:.6em}
 .menu{display:flex;flex-direction:column;gap:10px;width:min(320px,100%)}
 .menu .btn{width:100%;padding:1em}
@@ -140,7 +140,8 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 @media (max-width:900px){
  html,body{overflow:auto}
  .game{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}
- .mapwrap{height:52vh;min-height:280px}
+ .mapwrap{height:auto;min-height:0}.mapwrap canvas{height:min(48vh,92vw)}#secinfo{position:static!important;padding:0 10px 10px}#secinfo .card{max-width:none!important;display:block!important}
+ .actcard{order:-1}
  .side{overflow:visible}
  .detail{grid-template-columns:84px 1fr}.detail img,.detail canvas{width:84px!important;height:105px!important}
  .grid16{grid-template-columns:repeat(4,1fr);gap:6px}
