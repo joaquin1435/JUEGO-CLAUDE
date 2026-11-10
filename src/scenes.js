@@ -65,6 +65,27 @@ const SCENES = [
     { t: 'Ir al festín', run: () => { G.feast = 1; return ['Mañana a la mañana, la Cornucopia. Si vas, conseguís algo raro seguro... y una pelea casi segura.']; } },
     { t: 'Ni loco', run: () => ['Que se maten entre ellos.'] }] },
 ];
+SCENES.push(
+  { b: ['ruins', 'corn'], title: 'Una cámara caída', text: 'Entre los escombros hay una de las cámaras del Consejo, todavía encendida. La lucecita roja te mira.', opts: [
+    { t: 'Hablarle a la gente de tu casa', run: () => { fame(10); heal(G.P, 5); return ['Les decís que estás bien, que no se preocupen. Mentís, pero bien. +audiencia', 'good']; } },
+    { t: 'Romperla de una patada', run: () => { fame(Math.random() < .5 ? 12 : -8); return ['La pisás hasta que se apaga. Algunos aplauden, otros no.']; } }] },
+  { b: ['river', 'beach'], title: 'Algo flota', text: 'Una mochila flota en el agua, enganchada en unas ramas a cinco metros de la orilla.', opts: [
+    { t: 'Nadar hasta ella', sub: 'Resistencia', run: () => { const r = chk('res', 10); if (r.ok) return [`Llegás con los brazos acalambrados. Adentro: ${give(rollLoot(.45))}. ${r.s}`, 'good']; hurt(G.P, 12); return [`La corriente te arrastra contra una piedra. -12 vida. ${r.s}`, 'bad']; } },
+    { t: 'Engancharla con un palo largo', sub: 'Astucia', run: () => { const r = chk('ast', 10); if (r.ok) return [`Paciencia y maña. ${give(rollLoot(.35))}. ${r.s}`, 'good']; return [`Se suelta y se la lleva el río. ${r.s}`]; } }] },
+  { b: ['forest', 'field', 'swamp'], title: 'Huellas frescas', minDay: 2, text: 'Huellas de dos personas, frescas. Van hacia el mismo lado que vos.', opts: [
+    { t: 'Seguirlas y emboscarlos', run: () => { G.forceEnc = 1; G.trackBonus = 1; fame(4); return ['Los alcanzás sin que te vean. Vas a pegar primero.', 'good']; } },
+    { t: 'Borrar las tuyas y desviarte', run: () => { G.hidden = 1; return ['Caminás por las piedras un buen rato. Nadie te va a seguir.', 'good']; } }] },
+  { b: null, title: 'El himno', minDay: 3, text: 'De golpe suena el himno del Consejo por toda la arena, a todo volumen. Después, silencio. Alguien grita a lo lejos.', opts: [
+    { t: 'Aprovechar el ruido para moverte', run: () => { fame(3); G.hidden = 1; return ['Nadie escucha tus pasos. Te reubicás sin problema.', 'good']; } },
+    { t: 'Quedarte quieto y escuchar', sub: 'Astucia', run: () => { const r = chk('ast', 9); if (r.ok) { G.trackBonus = 1; return [`El grito vino del sector de al lado. Sabés dónde hay alguien herido. ${r.s}`, 'good']; } return [`No sacás nada en limpio. ${r.s}`]; } }] },
+  { b: null, title: 'Pesadilla', needC: 1, text: () => `${C_()} se despierta gritando en medio de la noche. Si alguien estaba cerca, ahora sabe dónde están.`, opts: [
+    { t: 'Taparle la boca y calmarlo', run: () => { loyal(5); return ['Tiembla un rato largo. Después se duerme abrazado a la mochila.', 'good']; } },
+    { t: 'Levantar todo y moverse ya', run: () => { G.hidden = 1; loyal(-3); return ['Se van a oscuras. Llegan agotados pero a salvo.']; } },
+    { t: 'Retarlo', run: () => { loyal(-12); G.forceEnc = Math.random() < .4 ? 1 : 0; return [`"¿Sos boludo? ¡Nos van a encontrar!" ${C_()} no te contesta.`, 'bad']; } }] },
+  { b: ['mountain', 'cave'], title: 'Una grieta', text: 'Una grieta angosta en la roca. Adentro brilla algo metálico.', opts: [
+    { t: 'Meter el brazo', run: () => { if (Math.random() < .3) { hurt(G.P, 14); return ['Algo te muerde. Sacás el brazo sangrando. -14 vida.', 'bad']; } return [`Sacás ${give(pick(LOOT_RARE))}.`, 'good']; } },
+    { t: 'Pasar de largo', run: () => ['Hay cosas que es mejor no saber.'] }] },
+);
 // escenas con personajes concretos (async)
 const lonely = () => aliveT().filter(t => t.team !== 0 && G.teams[t.team].m.filter(x => x.alive).length === 1);
 const freeTeams = () => aliveTeams().filter(tm => !tm.player && !G.allies.includes(tm.id));

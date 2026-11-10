@@ -5,6 +5,13 @@ const saveRec = () => { try { localStorage.setItem('pob_rec', JSON.stringify(REC
 document.addEventListener('pointerdown', () => Snd.init(), { once: false });
 Snd.setVol(Opt.music, Opt.sfx);
 
+const COMP_LINES = {
+  alta: ['Si salimos de esta, el asado lo pago yo.', 'Te cubro, andá tranquilo.', 'Nunca pensé que iba a confiar tanto en vos.', 'Vamos a salir los dos. Te lo juro.', 'Con vos al lado hasta me olvido de dónde estamos.'],
+  media: ['¿Escuchaste eso?', 'Mañana nos movemos temprano.', 'Este lugar me da mala espina.', 'Me duelen hasta las pestañas.', '¿Cuántos quedarán?', 'Extraño mi cama, loco.'],
+  baja: ['No me mires así.', 'Dormí vos primero... yo vigilo.', 'Ya veremos quién sale de acá.', 'Últimamente estás muy callado.', 'Yo no me olvido de nada, eh.'],
+  hambre: ['Me muero de hambre.', 'Si no comemos algo hoy, no llego.', 'Me comería hasta las bayas raras esas.'],
+  herido: ['No sé si aguanto mucho más.', 'Necesito curarme, en serio.', 'Me arde todo.'],
+};
 // ---------- Logros ----------
 const ACHS = {
   primera: ['🩸', 'Primera sangre', 'Eliminá a tu primer tributo.'], carnicero: ['🪓', 'Carnicero', '5 bajas en una sola partida.'],
@@ -389,6 +396,7 @@ async function act(type, arg) {
   await endPhase(encMult, ambushP);
 }
 async function endPhase(encMult = 1, ambushP = .2) {
+  if (G.hidden) { encMult *= .3; G.hidden = 0; }
   aiMove();
   // encuentro en tu sector
   const here = teamsIn(G.sec).filter(tm => !G.allies.includes(tm.id));
@@ -406,6 +414,7 @@ async function endPhase(encMult = 1, ambushP = .2) {
   G.hunger = Math.max(0, G.hunger - (teamPerk('resist') ? 5 : 10));
   if (G.hunger === 0) { hurt(G.P, 8); hurt(G.C, 6); loyal(-4); toast('🍖 El hambre te está matando. -8 vida'); if (!G.P.alive) { G.P.killer = 'el hambre'; return gameOver(); } }
   if (G.C.alive && G.C.hp < G.C.maxhp * .3 && Math.random() < .3) loyal(-3);
+  if (G.C.alive && G.P.alive && Math.random() < .3) { const pool = G.hunger < 30 ? COMP_LINES.hambre : G.C.hp < G.C.maxhp * .35 ? COMP_LINES.herido : G.loyalty > 70 ? COMP_LINES.alta : G.loyalty < 30 ? COMP_LINES.baja : COMP_LINES.media; const l = pick(pool); addLog(`<b>${cap(G.C.name)}:</b> "${l}"`); toast(`💬 <b>${cap(G.C.name)}:</b> "${l}"`, 3200); }
   if (await checkEnd()) return;
   G.phase++;
   if (G.phase > 2) { await nightFall(); if (G.over) return; G.day++; G.phase = 0; await newDay(); if (G.over) return; }

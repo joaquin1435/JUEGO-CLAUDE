@@ -729,7 +729,8 @@ function aiFight(a, b) {
     if (Math.random() < .64) { kill(t, k); addLog(killLine(k, t), 'k'); }
     else { hurt(t, rnd(15, 35)); l.sec = pick(SECTORS[l.sec].adj.filter(x => !G.closed.includes(x)).concat([0])); }
   });
-  wl.forEach(t => { if (Math.random() < .6) { const before = t.alive; hurt(t, rnd(6, 30)); if (before && !t.alive) addLog(`<b>${cap(t.name)}</b> ganó la pelea pero murió desangrado`, 'k'); } });
+  const last = aliveTeams().length <= 2;
+  wl.forEach(t => { if (Math.random() < .6) { const before = t.alive; hurt(t, last ? Math.min(rnd(6, 30), t.hp - 1) : rnd(6, 30)); if (before && !t.alive) addLog(`<b>${cap(t.name)}</b> ganó la pelea pero murió desangrado`, 'k'); } });
   if (!l.m.some(t => t.alive)) { w.inv.push(...l.inv); l.inv = []; l.m.forEach(t => { if (t.weapon) { const r = w.m.find(x => x.alive && (!x.weapon || ITEMS[x.weapon].w < ITEMS[t.weapon].w)); if (r) r.weapon = t.weapon; } }); }
 }
 function aiResolve() {
@@ -823,6 +824,27 @@ const SCENES = [
     { t: 'Ir al festín', run: () => { G.feast = 1; return ['Mañana a la mañana, la Cornucopia. Si vas, conseguís algo raro seguro... y una pelea casi segura.']; } },
     { t: 'Ni loco', run: () => ['Que se maten entre ellos.'] }] },
 ];
+SCENES.push(
+  { b: ['ruins', 'corn'], title: 'Una cámara caída', text: 'Entre los escombros hay una de las cámaras del Consejo, todavía encendida. La lucecita roja te mira.', opts: [
+    { t: 'Hablarle a la gente de tu casa', run: () => { fame(10); heal(G.P, 5); return ['Les decís que estás bien, que no se preocupen. Mentís, pero bien. +audiencia', 'good']; } },
+    { t: 'Romperla de una patada', run: () => { fame(Math.random() < .5 ? 12 : -8); return ['La pisás hasta que se apaga. Algunos aplauden, otros no.']; } }] },
+  { b: ['river', 'beach'], title: 'Algo flota', text: 'Una mochila flota en el agua, enganchada en unas ramas a cinco metros de la orilla.', opts: [
+    { t: 'Nadar hasta ella', sub: 'Resistencia', run: () => { const r = chk('res', 10); if (r.ok) return [`Llegás con los brazos acalambrados. Adentro: ${give(rollLoot(.45))}. ${r.s}`, 'good']; hurt(G.P, 12); return [`La corriente te arrastra contra una piedra. -12 vida. ${r.s}`, 'bad']; } },
+    { t: 'Engancharla con un palo largo', sub: 'Astucia', run: () => { const r = chk('ast', 10); if (r.ok) return [`Paciencia y maña. ${give(rollLoot(.35))}. ${r.s}`, 'good']; return [`Se suelta y se la lleva el río. ${r.s}`]; } }] },
+  { b: ['forest', 'field', 'swamp'], title: 'Huellas frescas', minDay: 2, text: 'Huellas de dos personas, frescas. Van hacia el mismo lado que vos.', opts: [
+    { t: 'Seguirlas y emboscarlos', run: () => { G.forceEnc = 1; G.trackBonus = 1; fame(4); return ['Los alcanzás sin que te vean. Vas a pegar primero.', 'good']; } },
+    { t: 'Borrar las tuyas y desviarte', run: () => { G.hidden = 1; return ['Caminás por las piedras un buen rato. Nadie te va a seguir.', 'good']; } }] },
+  { b: null, title: 'El himno', minDay: 3, text: 'De golpe suena el himno del Consejo por toda la arena, a todo volumen. Después, silencio. Alguien grita a lo lejos.', opts: [
+    { t: 'Aprovechar el ruido para moverte', run: () => { fame(3); G.hidden = 1; return ['Nadie escucha tus pasos. Te reubicás sin problema.', 'good']; } },
+    { t: 'Quedarte quieto y escuchar', sub: 'Astucia', run: () => { const r = chk('ast', 9); if (r.ok) { G.trackBonus = 1; return [`El grito vino del sector de al lado. Sabés dónde hay alguien herido. ${r.s}`, 'good']; } return [`No sacás nada en limpio. ${r.s}`]; } }] },
+  { b: null, title: 'Pesadilla', needC: 1, text: () => `${C_()} se despierta gritando en medio de la noche. Si alguien estaba cerca, ahora sabe dónde están.`, opts: [
+    { t: 'Taparle la boca y calmarlo', run: () => { loyal(5); return ['Tiembla un rato largo. Después se duerme abrazado a la mochila.', 'good']; } },
+    { t: 'Levantar todo y moverse ya', run: () => { G.hidden = 1; loyal(-3); return ['Se van a oscuras. Llegan agotados pero a salvo.']; } },
+    { t: 'Retarlo', run: () => { loyal(-12); G.forceEnc = Math.random() < .4 ? 1 : 0; return [`"¿Sos boludo? ¡Nos van a encontrar!" ${C_()} no te contesta.`, 'bad']; } }] },
+  { b: ['mountain', 'cave'], title: 'Una grieta', text: 'Una grieta angosta en la roca. Adentro brilla algo metálico.', opts: [
+    { t: 'Meter el brazo', run: () => { if (Math.random() < .3) { hurt(G.P, 14); return ['Algo te muerde. Sacás el brazo sangrando. -14 vida.', 'bad']; } return [`Sacás ${give(pick(LOOT_RARE))}.`, 'good']; } },
+    { t: 'Pasar de largo', run: () => ['Hay cosas que es mejor no saber.'] }] },
+);
 // escenas con personajes concretos (async)
 const lonely = () => aliveT().filter(t => t.team !== 0 && G.teams[t.team].m.filter(x => x.alive).length === 1);
 const freeTeams = () => aliveTeams().filter(tm => !tm.player && !G.allies.includes(tm.id));
@@ -1103,6 +1125,13 @@ const saveRec = () => { try { localStorage.setItem('pob_rec', JSON.stringify(REC
 document.addEventListener('pointerdown', () => Snd.init(), { once: false });
 Snd.setVol(Opt.music, Opt.sfx);
 
+const COMP_LINES = {
+  alta: ['Si salimos de esta, el asado lo pago yo.', 'Te cubro, andá tranquilo.', 'Nunca pensé que iba a confiar tanto en vos.', 'Vamos a salir los dos. Te lo juro.', 'Con vos al lado hasta me olvido de dónde estamos.'],
+  media: ['¿Escuchaste eso?', 'Mañana nos movemos temprano.', 'Este lugar me da mala espina.', 'Me duelen hasta las pestañas.', '¿Cuántos quedarán?', 'Extraño mi cama, loco.'],
+  baja: ['No me mires así.', 'Dormí vos primero... yo vigilo.', 'Ya veremos quién sale de acá.', 'Últimamente estás muy callado.', 'Yo no me olvido de nada, eh.'],
+  hambre: ['Me muero de hambre.', 'Si no comemos algo hoy, no llego.', 'Me comería hasta las bayas raras esas.'],
+  herido: ['No sé si aguanto mucho más.', 'Necesito curarme, en serio.', 'Me arde todo.'],
+};
 // ---------- Logros ----------
 const ACHS = {
   primera: ['🩸', 'Primera sangre', 'Eliminá a tu primer tributo.'], carnicero: ['🪓', 'Carnicero', '5 bajas en una sola partida.'],
@@ -1487,6 +1516,7 @@ async function act(type, arg) {
   await endPhase(encMult, ambushP);
 }
 async function endPhase(encMult = 1, ambushP = .2) {
+  if (G.hidden) { encMult *= .3; G.hidden = 0; }
   aiMove();
   // encuentro en tu sector
   const here = teamsIn(G.sec).filter(tm => !G.allies.includes(tm.id));
@@ -1504,6 +1534,7 @@ async function endPhase(encMult = 1, ambushP = .2) {
   G.hunger = Math.max(0, G.hunger - (teamPerk('resist') ? 5 : 10));
   if (G.hunger === 0) { hurt(G.P, 8); hurt(G.C, 6); loyal(-4); toast('🍖 El hambre te está matando. -8 vida'); if (!G.P.alive) { G.P.killer = 'el hambre'; return gameOver(); } }
   if (G.C.alive && G.C.hp < G.C.maxhp * .3 && Math.random() < .3) loyal(-3);
+  if (G.C.alive && G.P.alive && Math.random() < .3) { const pool = G.hunger < 30 ? COMP_LINES.hambre : G.C.hp < G.C.maxhp * .35 ? COMP_LINES.herido : G.loyalty > 70 ? COMP_LINES.alta : G.loyalty < 30 ? COMP_LINES.baja : COMP_LINES.media; const l = pick(pool); addLog(`<b>${cap(G.C.name)}:</b> "${l}"`); toast(`💬 <b>${cap(G.C.name)}:</b> "${l}"`, 3200); }
   if (await checkEnd()) return;
   G.phase++;
   if (G.phase > 2) { await nightFall(); if (G.over) return; G.day++; G.phase = 0; await newDay(); if (G.over) return; }

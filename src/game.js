@@ -79,7 +79,8 @@ function aiFight(a, b) {
     if (Math.random() < .64) { kill(t, k); addLog(killLine(k, t), 'k'); }
     else { hurt(t, rnd(15, 35)); l.sec = pick(SECTORS[l.sec].adj.filter(x => !G.closed.includes(x)).concat([0])); }
   });
-  wl.forEach(t => { if (Math.random() < .6) { const before = t.alive; hurt(t, rnd(6, 30)); if (before && !t.alive) addLog(`<b>${cap(t.name)}</b> ganó la pelea pero murió desangrado`, 'k'); } });
+  const last = aliveTeams().length <= 2;
+  wl.forEach(t => { if (Math.random() < .6) { const before = t.alive; hurt(t, last ? Math.min(rnd(6, 30), t.hp - 1) : rnd(6, 30)); if (before && !t.alive) addLog(`<b>${cap(t.name)}</b> ganó la pelea pero murió desangrado`, 'k'); } });
   if (!l.m.some(t => t.alive)) { w.inv.push(...l.inv); l.inv = []; l.m.forEach(t => { if (t.weapon) { const r = w.m.find(x => x.alive && (!x.weapon || ITEMS[x.weapon].w < ITEMS[t.weapon].w)); if (r) r.weapon = t.weapon; } }); }
 }
 function aiResolve() {
