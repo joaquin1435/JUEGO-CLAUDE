@@ -14,7 +14,7 @@ function startGame(pid, cid) {
   const teams = [{ id: 0, m: [P, C], sec: 0, inv: [], player: true }];
   for (let i = 0; i < 7; i++) teams.push({ id: i + 1, m: [rest[i * 2], rest[i * 2 + 1]], sec: 0, inv: [], trust: ri(40, 90) });
   teams.forEach(tm => tm.m.forEach(t => { t.team = tm.id; if (t.perk === 'arquero') t.weapon = 'arco'; }));
-  G = { day: 1, phase: 0, all, P, C, teams, inv: [], fame: 0, hunger: 100, loyalty: hasPerk(P, 'leal') || hasPerk(C, 'leal') ? 80 : 62, sec: 0, log: [], fallenToday: [], hazard: null, closed: [], trap: null, timeline: [], energyBonus: 0, over: false, moved: false, sponsorGot: 0, betrayed: null, allies: [] };
+  G = { day: 1, phase: 0, all, P, C, teams, inv: [], fame: 0, hunger: 100, loyalty: hasPerk(P, 'leal') || hasPerk(C, 'leal') ? 80 : 62, sec: 0, log: [], fallenToday: [], hazard: null, closed: [], trap: null, timeline: [], energyBonus: 0, over: false, moved: false, sponsorGot: 0, betrayed: null, allies: [], stats: { dealt: 0, taken: 0 } };
   if (teamPerk('trampera')) G.inv.push('trampa');
   G.inv.push('agua');
   return G;

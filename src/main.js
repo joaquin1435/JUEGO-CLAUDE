@@ -47,6 +47,7 @@ function loadGame() {
     const d = JSON.parse(localStorage.getItem('pob_save') || 'null'); if (!d) return false;
     const all = d.all.map(t => ({ ...t, ch: CHARS[t.ch], L: lookOf(CHARS[t.ch]) }));
     G = { ...d, all, P: all[d.P], C: all[d.C], teams: d.teams.map(tm => ({ ...tm, m: tm.m.map(i => all[i]) })), fallenToday: d.fallenToday.map(i => all[i]) };
+    G.stats = G.stats || { dealt: 0, taken: 0 }; G.allies = G.allies || [];
     return true;
   } catch (e) { return false; }
 }
@@ -77,7 +78,7 @@ function screenOptions() {
   <div class="opt-row"><span>Música</span><input type="range" class="range" style="width:55%" min="0" max="1" step=".05" value="${Opt.music}" id="o-m"></div>
   <div class="opt-row"><span>Efectos</span><input type="range" class="range" style="width:55%" min="0" max="1" step=".05" value="${Opt.sfx}" id="o-s"></div>
   <div class="opt-row"><span>Velocidad de animaciones</span><select id="o-v" class="btn" style="padding:.5em">${Object.entries(sp).map(([k, v]) => `<option value="${k}" ${+k === Opt.speed ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-  <div class="opt-row"><span>Dificultad</span><select id="o-d" class="btn" style="padding:.5em">${[[.75, 'Fácil'], [1, 'Normal'], [1.3, 'Difícil']].map(([k, v]) => `<option value="${k}" ${k === Opt.diff ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+  <div class="opt-row"><span>Dificultad</span><select id="o-d" class="btn" style="padding:.5em">${[[.7, 'Fácil'], [.9, 'Normal'], [1.15, 'Difícil']].map(([k, v]) => `<option value="${k}" ${k === Opt.diff ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
   <div class="opt-row"><span>Controlar a tu compañero en combate</span><input type="checkbox" id="o-c" ${Opt.ctrl ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--ember)"></div>
   <div class="opt-row"><span>Borrar récords</span><button class="btn danger" id="o-r">Borrar</button></div>
   <button class="btn primary" style="margin-top:18px;width:100%" id="bk">Listo</button></div></div>`);
@@ -354,8 +355,8 @@ async function encounter(tm, ambush) {
 async function afterFight(r, tm) {
   if (r === 'win') {
     const got = []; tm.inv.splice(0).forEach(i => got.push(give(i))); tm.m.forEach(t => { if (!t.alive && t.weapon) { const w = t.weapon; t.weapon = null; const g = give(w, true); if (g) got.push(g); } });
-    loyal(8); fame(5);
-    await tell({ title: 'Ganaron', biome: SECTORS[G.sec].b, faces: tm.m.map(t => ({ ...t, enemy: true })), text: `${tm.m.filter(t => !t.alive).map(t => cap(t.name)).join(' y ')} ${tm.m.filter(t => !t.alive).length > 1 ? 'quedan' : 'queda'} en el piso.${got.filter(Boolean).length ? ' Se llevan: ' + got.filter(Boolean).join(', ') + '.' : ''}`, cls: 'good' });
+    loyal(8); fame(5); [G.P, G.C].forEach(t => heal(t, t.maxhp * .15));
+    await tell({ title: 'Ganaron', biome: SECTORS[G.sec].b, faces: tm.m.map(t => ({ ...t, enemy: true })), text: `${tm.m.filter(t => !t.alive).map(t => cap(t.name)).join(' y ')} ${tm.m.filter(t => !t.alive).length > 1 ? 'quedan' : 'queda'} en el piso. La adrenalina les devuelve algo de aire (+15% vida).${got.filter(Boolean).length ? ' Se llevan: ' + got.filter(Boolean).join(', ') + '.' : ''}`, cls: 'good' });
     if (tm.m.some(t => t.alive)) tm.sec = pick(SECTORS[G.sec].adj);
   } else if (r === 'fled') { const old = G.sec; G.sec = pick(SECTORS[G.sec].adj.filter(a => !G.closed.includes(a)).concat([0]).filter(a => a !== old)); loyal(-3); addLog(`Huyen a <b>${SECTORS[G.sec].n}</b>.`); }
   renderGame();
@@ -442,7 +443,7 @@ async function finalDilemma() {
 function placeOf() { return aliveT().length + 1; }
 async function victory(txt) {
   G.over = true; busy = false; REC.plays++; REC.wins++; REC.best = 1; REC.kills = Math.max(REC.kills, G.P.kills); saveRec();
-  ach('vencedor'); if (!G.P.kills) ach('pacifista'); if (G.both) ach('juntos'); if (!G.C.alive) ach('solo'); if (Opt.diff > 1) ach('dificil');
+  ach('vencedor'); if (!G.P.kills) ach('pacifista'); if (G.both) ach('juntos'); if (!G.C.alive) ach('solo'); if (Opt.diff > 1.1) ach('dificil');
   Snd.music('none'); Snd.play('win'); flash('#ffd27a', .6);
   endScreen(true, txt || `${cap(G.P.name)} es el vencedor de los Juegos de La Población.`, G.both ? `${cap(G.P.name)} & ${cap(G.C.name)}` : cap(G.P.name));
 }
@@ -463,7 +464,7 @@ function endScreen(won, txt, winner, place) {
   view(`<div class="screen"><div class="wrap" style="max-width:820px"><div style="text-align:center"><span class="tag">${won ? 'Vencedor' : 'Fin del juego'}</span><div class="endbig disp" style="margin-top:10px;${won ? 'color:var(--gold)' : 'color:#ff6b5b'}">${won ? '¡GANASTE!' : 'CAÍSTE'}</div>
   <div style="display:flex;justify-content:center;gap:10px;margin:18px 0"><img src="${portrait(G.P.ch, 200, won ? 0 : 2)}" style="width:110px;height:110px;border-radius:50%;border:3px solid ${won ? 'var(--gold)' : '#555'}">${G.both ? `<img src="${portrait(G.C.ch, 200)}" style="width:110px;height:110px;border-radius:50%;border:3px solid var(--gold)">` : ''}</div>
   <p style="font-size:1.05rem;line-height:1.6;max-width:600px;margin:0 auto">${txt}</p>${!won ? `<p class="mut" style="margin-top:8px">Ganador de los Juegos: <b style="color:var(--gold)">${winner}</b></p>` : ''}</div>
-  <div class="stats"><div><b>#${won ? 1 : place}</b><span>Puesto</span></div><div><b>${G.P.kills}</b><span>Bajas</span></div><div><b>${G.day}</b><span>Días</span></div><div><b>${G.fame}</b><span>Audiencia</span></div></div>
+  <div class="stats"><div><b>#${won ? 1 : place}</b><span>Puesto</span></div><div><b>${G.P.kills}</b><span>Bajas</span></div><div><b>${G.day}</b><span>Días</span></div><div><b>${G.fame}</b><span>Audiencia</span></div><div><b>${G.stats ? G.stats.dealt : 0}</b><span>Daño hecho</span></div><div><b>${G.stats ? G.stats.taken : 0}</b><span>Daño recibido</span></div></div>
   <div class="card"><div class="sectitle">Tu historia</div><div class="timeline">${G.timeline.length ? G.timeline.map(t => `<p>${t}</p>`).join('') : '<p class="mut">Pasaste desapercibido.</p>'}</div></div>
   <div class="card" style="margin-top:12px"><div class="sectitle">Los 16</div><div class="grid16" style="padding:12px">${G.all.slice().sort((a, b) => (b.alive - a.alive) || (b.diedDay - a.diedDay)).map(t => `<div class="tcard ${t.alive ? 'sel' : ''}" style="cursor:default"><img src="${portrait(t.ch, 120, t.alive ? 0 : 2)}" class="${t.alive ? '' : 'dead'}"><div class="nm">${cap(t.name)}</div><div class="pk">${t.alive ? 'Sobrevivió' : 'Día ' + t.diedDay + ' · ' + esc(t.killer || '')}${t.kills ? ' · ' + t.kills + '☠' : ''}</div></div>`).join('')}</div></div>
   <div style="display:flex;gap:10px;justify-content:center;margin:20px 0 40px;flex-wrap:wrap"><button class="btn primary" id="again">Jugar otra vez</button><button class="btn" id="home">Menú</button></div></div></div>`);

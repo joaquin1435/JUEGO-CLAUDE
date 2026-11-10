@@ -1,4 +1,11 @@
 // ===== Combate por turnos animado =====
+const LINES = {
+  start: ['¡Vení, dale!', 'Nada personal, eh.', 'Hoy no es tu día.', '¿Te la bancás?', 'Perdón, en serio.', 'Te estaba esperando.', '¡Ahora sí!', 'No me mires así.', 'Uno menos.'],
+  kill: ['Perdoname...', '¡¿Quién sigue?!', 'Te lo advertí.', 'Ni lo sentiste.', 'Que alguien me diga que eso pasó.', 'Lo siento, de verdad.'],
+  mate: ['¡NOOO!', '¡Levantate, dale!', 'Lo vas a pagar.', 'No, no, no...', '¡¿Qué hiciste?!'],
+  hurt: ['¡Ay!', 'Uff...', '¡La puta madre!', 'Eso dolió.', 'Tranqui, tranqui.'],
+  betray: ['Solo puede quedar uno.', 'Perdón. Lo pensé mucho.', 'No me la hagas difícil.', 'Vos hubieras hecho lo mismo.'],
+};
 async function fight(allies, enemies, opt = {}) {
   allies = allies.filter(t => t.alive); enemies = enemies.filter(t => t.alive);
   Snd.music('combat'); killTip();
@@ -7,6 +14,7 @@ async function fight(allies, enemies, opt = {}) {
   document.body.appendChild(root);
   const cv = root.querySelector('canvas'), c = cv.getContext('2d'), msgEl = root.querySelector('.cmsg'), tgEl = root.querySelector('.targets'), actEl = root.querySelector('.acts-c');
   const biome = SECTORS[G.sec].b, bgc = document.createElement('canvas');
+  const decals = [];
   let W, H, S, shakeT = 0, running = true, projs = [], banner = null;
   const mk = (t, side, i) => ({ t, side, L: t.L, name: t.name, dir: side === 'A' ? 1 : -1, seed: Math.random() * 9, energy: 1 + (side === 'A' ? G.energyBonus : 0), blind: 0, shield: 0, poison: 0, stun: 0, guard: false, coat: 0, idx: i, get hp() { return t.hp; }, get maxhp() { return t.maxhp; }, get weapon() { return t.weapon; }, get dead() { return !t.alive; }, deadT: 0, scale: 1 });
   const F = [...allies.map((t, i) => mk(t, 'A', i)), ...enemies.map((t, i) => mk(t, 'B', i))];
@@ -22,6 +30,7 @@ async function fight(allies, enemies, opt = {}) {
     if (!running) return; requestAnimationFrame(frame); if (!W) return;
     c.save(); if (now < shakeT) c.translate(rnd(-8, 8), rnd(-6, 6));
     c.drawImage(bgc, 0, 0);
+    decals.forEach(d => { c.fillStyle = d.c; c.globalAlpha = .55; c.beginPath(); c.ellipse(d.x, d.y, d.r, d.r * .35, 0, 0, 7); c.fill(); }); c.globalAlpha = 1;
     [...F].sort((a, b) => a.y - b.y).forEach(f => drawFighter(c, f, now));
     // barras de vida
     F.forEach(f => {
@@ -93,7 +102,11 @@ async function fight(allies, enemies, opt = {}) {
     Parts.burst(d.x, d.y - 70 * S, crit ? 26 : 14, crit ? '#ffcf5a' : '#b3191c', crit ? 7 : 4.5, 750, .3, 3 * S / 1.4);
     Parts.text(d.x, d.y - 125 * S, (crit ? '¡' : '') + '-' + dmg + (crit ? '!' : ''), crit ? '#ffd27a' : '#ff6b5b', crit);
     Snd.play(crit ? 'crit' : 'hit'); if (crit) { shakeT = performance.now() + 260; flash('#fff', .18); }
+    for (let k = 0; k < (crit ? 3 : 1); k++) decals.push({ x: d.x + rnd(-30, 30) * S, y: d.y + rnd(-4, 6) * S, r: rnd(4, 10) * S, c: '#5a0d0d' });
+    if (d.side === 'A') G.stats.taken += dmg; else if (a && a.side === 'A') G.stats.dealt += dmg;
     hurt(d.t, dmg, a && a.t);
+    if (d.dead) { const mate = F.find(x => x.side === d.side && !x.dead); if (mate) talk(mate, LINES.mate); if (a && !a.dead && Math.random() < .7) talk(a, LINES.kill); }
+    else if (crit && Math.random() < .5) talk(d, LINES.hurt);
     if (d.dead) { d.deadT = performance.now(); Snd.play('death'); Parts.burst(d.x, d.y - 40 * S, 30, '#555', 3, 1200, .05, 5); if (d.t === G.P || d.t === G.C || (a && (a.t === G.P || a.t === G.C))) setTimeout(() => Snd.play('cannon'), 600); showBanner(cap(d.name) + ' cae', d.side === 'A' ? '#ff6b5b' : '#ffd27a'); fame(a && a.side === 'A' ? 10 : 0); await sleep(900); }
   }
   async function useItem(f, id, tgt) {
@@ -108,6 +121,7 @@ async function fight(allies, enemies, opt = {}) {
     else if (id === 'humo') { Snd.play('smoke'); Parts.burst(f.x, f.y - 50 * S, 80, '#aaa', 6, 1500, -.02, 9); say('Una nube de humo lo tapa todo...'); await sleep(700); return 'fled'; }
     await sleep(350);
   }
+  function talk(f, pool) { f.bubble = { txt: pick(pool), t0: performance.now() }; }
   const enemyTeam = G.teams.find(tm => tm.m.includes(enemies[0]));
   // ---- IA ----
   async function aiTurn(f) {
@@ -144,7 +158,7 @@ async function fight(allies, enemies, opt = {}) {
   const vs = document.createElement('div'); vs.className = 'vs';
   vs.innerHTML = `<div class="vs-side l">${allies.map(t => `<img src="${portrait(t.ch, 200)}">`).join('')}</div><div class="vs-mid disp">${opt.banner || 'VS'}</div><div class="vs-side r">${enemies.map(t => `<img src="${portrait(t.ch, 200)}">`).join('')}</div>`;
   root.appendChild(vs); Snd.play('crit'); await sleep(1300); vs.classList.add('out'); setTimeout(() => vs.remove(), 500);
-  say(opt.intro || '¡Pelea!'); await sleep(300);
+  say(opt.intro || '¡Pelea!'); F.filter(f => f.side === 'B').forEach((f, i) => { if (Math.random() < .75) setTimeout(() => talk(f, opt.banner === 'TRAICIÓN' ? LINES.betray : LINES.start), i * 700); }); await sleep(300);
   if (opt.preDmg) { for (const e of foes(F[0])) await applyDmg(e, opt.preDmg, F[0], false); say('¡Cayeron en tu trampa!'); await sleep(600); }
   // arcos: tiro gratis
   for (const f of F.filter(f => f.t.weapon === 'arco' && !f.dead)) { const fs = foes(f); if (fs.length) { say(`${cap(f.name)} dispara primero con el arco.`); await strike(f, fs[0], .8, 'flechazo'); } }
