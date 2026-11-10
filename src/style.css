@@ -15,7 +15,7 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 .btn.danger{background:linear-gradient(180deg,#a0221d,#6b1210);border-color:#d0453f}
 .btn:disabled{opacity:.35;pointer-events:none}
 .btn small{opacity:.7;font-weight:400;font-size:.78em}
-.screen{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;animation:fadeIn .5s ease}
+.screen{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;animation:fadeIn .5s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
@@ -145,5 +145,18 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
  .detail{grid-template-columns:84px 1fr}.detail img{width:84px;height:84px}
  .grid16{grid-template-columns:repeat(4,1fr);gap:6px}
  .tcard{padding:6px 2px}.tcard img{width:58px;height:58px}.tcard .nm{font-size:1.1rem}.tcard .pk{display:none}
- .cbar .btn{min-width:74px;font-size:.78rem}
+ .cbar .row{flex-wrap:nowrap;gap:5px}.cbar .btn{min-width:0;flex:1;font-size:.7rem;padding:.55em .2em}.cbar .btn small{font-size:.62rem}
 }
+
+.vs{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4vw;background:radial-gradient(ellipse,rgba(60,10,0,.85),rgba(0,0,0,.92));z-index:5;transition:opacity .45s}
+.vs.out{opacity:0}
+.vs-side{display:flex;gap:10px}.vs-side img{width:clamp(70px,14vw,150px);height:clamp(70px,14vw,150px);border-radius:50%;border:4px solid var(--gold);box-shadow:0 0 40px -6px var(--ember)}
+.vs-side.r img{border-color:var(--red)}
+.vs-side.l{animation:slideL .5s cubic-bezier(.2,1.4,.4,1) both}.vs-side.r{animation:slideR .5s cubic-bezier(.2,1.4,.4,1) both}
+.vs-mid{font-size:clamp(2.4rem,9vw,6rem);color:#fff;text-shadow:0 0 30px var(--ember);animation:pop .5s .2s both;text-align:center;line-height:.9}
+@keyframes slideL{from{transform:translateX(-60vw)}to{transform:none}}@keyframes slideR{from{transform:translateX(60vw)}to{transform:none}}
+#lineup{position:fixed;left:0;right:0;bottom:0;width:100%;height:24vh;pointer-events:none;z-index:0;opacity:.55}
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.ach{display:flex;gap:10px;align-items:center;padding:12px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.ach .i{font-size:1.8rem}.ach.off{opacity:.38;filter:grayscale(1)}
+@media (max-width:900px){.vs{flex-direction:column;gap:12px}}

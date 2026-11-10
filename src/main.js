@@ -5,14 +5,43 @@ const saveRec = () => { try { localStorage.setItem('pob_rec', JSON.stringify(REC
 document.addEventListener('pointerdown', () => Snd.init(), { once: false });
 Snd.setVol(Opt.music, Opt.sfx);
 
+// ---------- Logros ----------
+const ACHS = {
+  primera: ['🩸', 'Primera sangre', 'Eliminá a tu primer tributo.'], carnicero: ['🪓', 'Carnicero', '5 bajas en una sola partida.'],
+  vencedor: ['👑', 'Vencedor', 'Ganá los Juegos.'], pacifista: ['🕊️', 'Manos limpias', 'Ganá sin matar a nadie.'],
+  juntos: ['🤝', 'Rompan las reglas', 'Ganen los dos juntos.'], traidor: ['🗡️', 'Et tu, Brute', 'Traicioná a tu compañero.'],
+  sobrevivi: ['🛡️', 'Ojos en la nuca', 'Sobreviví a la traición de tu compañero.'], martir: ['🌹', 'Mártir', 'Sacrificate en el final.'],
+  final: ['🏛️', 'Hasta el final', 'Llegá al día 6.'], trampa: ['🪤', 'Trampero', 'Que alguien caiga en tu trampa.'],
+  festin: ['🎁', 'Invitado al festín', 'Llevate algo del festín.'], solo: ['🐺', 'Lobo solitario', 'Ganá después de perder a tu compañero.'],
+  dificil: ['💀', 'Masoquista', 'Ganá en dificultad Difícil.'], hambre: ['🍖', 'Panza llena', 'Terminá un día con la saciedad al máximo.'],
+};
+let ACH = {}; try { ACH = JSON.parse(localStorage.getItem('pob_ach') || '{}'); } catch (e) {}
+function ach(id) { if (ACH[id] || !ACHS[id]) return; ACH[id] = Date.now(); try { localStorage.setItem('pob_ach', JSON.stringify(ACH)); } catch (e) {} toast(`🏆 Logro: <b>${ACHS[id][1]}</b>`, 3500); Snd.play('pick'); }
+function screenAch() {
+  const n = Object.keys(ACH).length;
+  view(`<div class="screen" style="justify-content:flex-start"><div class="wrap" style="max-width:900px"><div class="title-row"><div><span class="tag">${n} de ${Object.keys(ACHS).length}</span><h2>Logros</h2></div><button class="btn ghost" id="bk">← Volver</button></div>
+  <div class="achs">${Object.entries(ACHS).map(([k, [i, nm, d]]) => `<div class="ach ${ACH[k] ? '' : 'off'}"><div class="i">${i}</div><div><b>${nm}</b><div class="mut" style="font-size:.8rem">${d}</div></div></div>`).join('')}</div></div></div>`);
+  $('#bk').onclick = screenTitle;
+}
+// fila de los 16 animados en el menú
+function lineup() {
+  const cv = document.createElement('canvas'); cv.id = 'lineup'; app.appendChild(cv);
+  const fs = shuffle(CHARS).map((ch, i) => ({ L: lookOf(ch), dir: i < 8 ? 1 : -1, seed: i * 1.7, hp: 1, maxhp: 1, weapon: pick([null, ...WEAPONS]), i }));
+  (function loop(now) {
+    if (!document.body.contains(cv)) return; requestAnimationFrame(loop);
+    const W = cv.width = cv.clientWidth * devicePixelRatio, H = cv.height = cv.clientHeight * devicePixelRatio, c = cv.getContext('2d'), s = Math.min(H / 170, W / 900);
+    fs.forEach((f, i) => { f.scale = s; f.x = W * (.04 + i * .92 / 15) + (i % 2 ? 0 : 0); f.y = H * (i % 2 ? .88 : .98); f.dir = f.x < W / 2 ? 1 : -1; if (!f.anim && Math.random() < .002) f.anim = { type: pick(['atk', 'guard', 'win', 'cast']), t0: now, dur: 700, dist: 20 * s }; });
+    [...fs].sort((a, b) => a.y - b.y).forEach(f => drawFighter(c, f, now));
+  })(performance.now());
+}
 // ---------- Título ----------
 function screenTitle() {
   BG.set(true); Snd.music('menu');
-  view(`<div class="screen"><div class="logo"><div class="kicker">Los Juegos de</div><h1>LA POBLACIÓN</h1><div class="sub">ARENA · 16</div></div>
-  <div class="menu"><button class="btn primary" id="b-play">▶ Jugar</button><button class="btn" id="b-how">Cómo se juega</button><button class="btn" id="b-opt">Opciones</button></div>
+  view(`<div class="screen" style="padding-bottom:20vh"><div class="logo"><div class="kicker">Los Juegos de</div><h1>LA POBLACIÓN</h1><div class="sub">ARENA · 16</div></div>
+  <div class="menu"><button class="btn primary" id="b-play">▶ Jugar</button><button class="btn" id="b-how">Cómo se juega</button><button class="btn" id="b-ach">🏆 Logros <small>${Object.keys(ACH).length}/${Object.keys(ACHS).length}</small></button><button class="btn" id="b-opt">Opciones</button></div>
   <p class="mut" style="margin-top:22px;font-size:.8rem;text-align:center">Partidas ${REC.plays} · Victorias ${REC.wins} · Mejor puesto ${REC.best === 16 ? '—' : '#' + REC.best} · Récord de bajas ${REC.kills}</p></div>
   <div class="foot">16 tributos · 8 duplas · 6 días · 1 sobreviviente</div>`);
-  $('#b-play').onclick = screenSelect; $('#b-how').onclick = screenHow; $('#b-opt').onclick = screenOptions;
+  $('#b-play').onclick = screenSelect; $('#b-how').onclick = screenHow; $('#b-opt').onclick = screenOptions; $('#b-ach').onclick = screenAch; lineup();
 }
 function screenHow() {
   view(`<div class="screen"><div class="card wrap" style="max-width:720px;padding:24px"><h2 style="font-size:2.6rem">Cómo se juega</h2><div class="howto">
@@ -30,11 +59,13 @@ function screenOptions() {
   <div class="opt-row"><span>Música</span><input type="range" class="range" style="width:55%" min="0" max="1" step=".05" value="${Opt.music}" id="o-m"></div>
   <div class="opt-row"><span>Efectos</span><input type="range" class="range" style="width:55%" min="0" max="1" step=".05" value="${Opt.sfx}" id="o-s"></div>
   <div class="opt-row"><span>Velocidad de animaciones</span><select id="o-v" class="btn" style="padding:.5em">${Object.entries(sp).map(([k, v]) => `<option value="${k}" ${+k === Opt.speed ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+  <div class="opt-row"><span>Dificultad</span><select id="o-d" class="btn" style="padding:.5em">${[[.75, 'Fácil'], [1, 'Normal'], [1.3, 'Difícil']].map(([k, v]) => `<option value="${k}" ${k === Opt.diff ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
   <div class="opt-row"><span>Borrar récords</span><button class="btn danger" id="o-r">Borrar</button></div>
   <button class="btn primary" style="margin-top:18px;width:100%" id="bk">Listo</button></div></div>`);
   $('#o-m').oninput = e => { Opt.music = +e.target.value; Snd.setVol(Opt.music, Opt.sfx); saveOpt(); };
   $('#o-s').oninput = e => { Opt.sfx = +e.target.value; Snd.setVol(Opt.music, Opt.sfx); saveOpt(); Snd.play('hit'); };
   $('#o-v').onchange = e => { Opt.speed = +e.target.value; saveOpt(); };
+  $('#o-d').onchange = e => { Opt.diff = +e.target.value; saveOpt(); };
   $('#o-r').onclick = () => { REC = { plays: 0, wins: 0, kills: 0, best: 16 }; saveRec(); toast('Récords borrados'); };
   $('#bk').onclick = screenTitle;
 }
@@ -148,8 +179,11 @@ function mapLoop(now) {
     const vis = n.id === G.sec || (teamPerk('rastreo') && adj.includes(n.id));
     if (vis && n.id !== G.sec) { const k = teamsIn(n.id).reduce((s, tm) => s + tm.m.filter(x => x.alive).length, 0); if (k) { c.fillStyle = '#e2403a'; c.beginPath(); c.arc(n.x + n.r * .6, n.y - n.r * .55, n.r * .22, 0, 7); c.fill(); c.fillStyle = '#fff'; c.font = `800 ${n.r * .24}px Inter`; c.fillText(k, n.x + n.r * .6, n.y - n.r * .47); } }
   });
-  // ficha del jugador
-  const me = mapNodes[G.sec], bob = Math.sin(t * 3) * 4;
+  // tinte según momento del día
+  c.fillStyle = ['rgba(255,170,80,.06)', 'rgba(255,90,30,.08)', 'rgba(20,40,120,.28)'][G.phase] || 'transparent'; c.fillRect(0, 0, W, H);
+  // ficha del jugador (se desliza entre sectores)
+  const to = mapNodes[G.sec], fr = mapNodes[G.prevSec ?? G.sec], k = clamp((now - (G.moveT || 0)) / 550, 0, 1), e = 1 - Math.pow(1 - k, 3);
+  const me = { x: fr.x + (to.x - fr.x) * e, y: fr.y + (to.y - fr.y) * e - Math.sin(k * Math.PI) * 30, r: to.r }, bob = Math.sin(t * 3) * 4;
   if (!meImg || meImg._id !== G.P.id) { meImg = new Image(); meImg._id = G.P.id; meImg.src = portrait(G.P.ch, 96); }
   const pr = me.r * .5; c.save(); c.shadowColor = '#ff6a2b'; c.shadowBlur = 20; c.beginPath(); c.arc(me.x, me.y - me.r - pr * .4 + bob, pr, 0, 7); c.fillStyle = '#ff6a2b'; c.fill(); c.restore();
   c.save(); c.beginPath(); c.arc(me.x, me.y - me.r - pr * .4 + bob, pr * .88, 0, 7); c.clip(); c.drawImage(meImg, me.x - pr, me.y - me.r - pr * 1.4 + bob, pr * 2, pr * 2); c.restore();
@@ -213,10 +247,10 @@ async function act(type, arg) {
   if (busy || G.over) return; busy = true; renderGame();
   const s = SECTORS[G.sec]; let encMult = 1, ambushP = .2;
   if (type === 'move') {
-    G.sec = arg; Snd.play('step'); hoverSec = -1; addLog(`Te movés a <b>${SECTORS[arg].n}</b>.`);
+    G.prevSec = G.sec; G.moveT = performance.now(); G.sec = arg; Snd.play('step'); hoverSec = -1; addLog(`Te movés a <b>${SECTORS[arg].n}</b>.`);
     if (Math.random() < .35) await runScene(pickScene());
   } else if (type === 'explore') {
-    if (G.feast === 2 && G.sec === 0) { const a = give(pick(LOOT_RARE)), b = give(pick(LOOT_RARE)); G.feast = 0; G.forceEnc = 1; fame(10); await tell({ title: 'El festín', biome: 'corn', text: `Sobre la mesa hay mochilas con números. Agarrás ${a} y ${b}. Atrás tuyo, pasos...`, cls: 'good' }); }
+    if (G.feast === 2 && G.sec === 0) { const a = give(pick(LOOT_RARE)), b = give(pick(LOOT_RARE)); G.feast = 0; G.forceEnc = 1; fame(10); ach('festin'); await tell({ title: 'El festín', biome: 'corn', text: `Sobre la mesa hay mochilas con números. Agarrás ${a} y ${b}. Atrás tuyo, pasos...`, cls: 'good' }); }
     else if (Math.random() < .78) await runScene(pickScene());
     else { const found = Math.random() < .25 + s.loot * .15 ? give(rollLoot(.15 + s.loot * .1)) : null; await tell({ title: 'Explorando', biome: s.b, text: found ? `Revolviendo encontrás ${found}.` : 'Horas buscando y nada. Por lo menos nadie te vio.', cls: found ? 'good' : '' }); }
     encMult = 1.1;
@@ -233,7 +267,7 @@ async function act(type, arg) {
     if (i === 0) {
       Snd.play('betray'); const r = await fight([G.P], [G.C], { firstStrike: true, preDmg: 18, noflee: true, banner: 'TRAICIÓN', intro: `Le clavás el primer golpe por la espalda.` });
       if (!G.P.alive) return gameOver();
-      fame(18); mark(`Traicionaste a ${cap(G.C.name)}.`); addLog(`<b>${cap(G.P.name)}</b> traicionó a <b>${cap(G.C.name)}</b>`, 'k'); G.betrayed = 'you';
+      fame(18); ach('traidor'); mark(`Traicionaste a ${cap(G.C.name)}.`); addLog(`<b>${cap(G.P.name)}</b> traicionó a <b>${cap(G.C.name)}</b>`, 'k'); G.betrayed = 'you';
       if (G.C.weapon) give(G.C.weapon, true);
     } else { busy = false; renderGame(); return; }
   }
@@ -266,7 +300,7 @@ async function endPhase(encMult = 1, ambushP = .2) {
 async function encounter(tm, ambush) {
   const foes = tm.m.filter(t => t.alive); if (!foes.length) return;
   const faces = foes.map(t => ({ ...t, enemy: true }));
-  let pre = 0; if (G.trap === G.sec) { pre = teamPerk('trampera') ? 30 : 16; G.trap = null; }
+  let pre = 0; if (G.trap === G.sec) { ach('trampa'); mark('Alguien cayó en tu trampa.'); pre = teamPerk('trampera') ? 30 : 16; G.trap = null; }
   const pw = teamPower(tm), mine = teamPower(myTeam()), feel = pw > mine * 1.25 ? 'Se los ve <b style="color:#ff6b5b">más fuertes que ustedes</b>.' : pw < mine * .8 ? 'Se los ve <b style="color:#4ec27a">débiles</b>.' : 'Parejo.';
   let r;
   if (ambush) {
@@ -298,6 +332,7 @@ async function checkEnd() {
   return false;
 }
 async function nightFall() {
+  if (G.hunger >= 100) ach('hambre');
   aiNightBetrayals();
   const fallen = G.fallenToday.filter(t => t !== G.P); G.fallenToday = [];
   view(`<div class="screen night" style="background:radial-gradient(ellipse at top,#121a35,#05060c 70%)"><div class="mut" style="letter-spacing:.4em;text-transform:uppercase;font-size:.8rem">Fin del día ${G.day}</div><h2>El cielo de la noche</h2>
@@ -319,7 +354,7 @@ async function nightFall() {
       await tell({ title: 'Un ruido en la oscuridad', biome: SECTORS[G.sec].b, night: true, faces: [{ ...G.C, enemy: true }], text: `Te despertás con ${cap(G.C.name)} encima tuyo, cuchillo en mano. "Perdón. Solo puede quedar uno."`, cls: 'bad', btn: 'Pelear por tu vida' });
       const r = await fight([G.P], [G.C], { ambush: true, noflee: true, banner: 'TRAICIÓN' });
       if (!G.P.alive) { G.over = true; return gameOver(); }
-      mark(`${cap(G.C.name)} te traicionó y lo mataste.`); fame(15); G.betrayed = 'them'; if (G.C.weapon) give(G.C.weapon, true);
+      mark(`${cap(G.C.name)} te traicionó y lo mataste.`); ach('sobrevivi'); fame(15); G.betrayed = 'them'; if (G.C.weapon) give(G.C.weapon, true);
     }
   }
   if (aliveTeams().filter(tm => !tm.player).length === 0) { await finalDilemma(); }
@@ -343,7 +378,7 @@ async function newDay() {
   await tell({ tag: `Día ${G.day}`, title: 'Amanece', biome: SECTORS[G.sec].b, text: msg.join('<br>') });
 }
 async function finale() {
-  busy = true; G.sec = 0; renderGame();
+  ach('final'); busy = true; G.sec = 0; renderGame();
   await tell({ tag: 'El final', title: 'Todos a la Cornucopia', biome: 'corn', text: 'Las paredes de la arena avanzan. El suelo tiembla. No queda dónde esconderse: el Consejo los quiere a todos en el centro. Ahora.' });
   let ai = aliveTeams().filter(tm => !tm.player);
   while (ai.length > 1) { const [a, b] = shuffle(ai); aiFight(a, b); ai = aliveTeams().filter(tm => !tm.player); }
@@ -364,13 +399,14 @@ async function finalDilemma() {
     { t: '⚔️ Pelear contra tu compañero', cls: 'danger' }, { t: '🤝 Negarse juntos a seguir', sub: `Astucia + audiencia (${G.fame})` }, { t: '🕊️ Dejarlo ganar a él' }] });
   if (i === 0) { Snd.play('betray'); G.over = false; const r = await fight([G.P], [G.C], { noflee: true, banner: 'UNO SOLO' }); G.over = true; if (!G.P.alive) return gameOver(true); mark(`Mataste a ${cap(G.C.name)} en el final.`); return victory(); }
   if (i === 1) { const c = chk('ast', 14 - Math.floor(G.fame / 15) - Math.floor(G.loyalty / 30)); if (c.ok) { G.both = true; return victory(`Se paran espalda con espalda y miran a las cámaras. El público enloquece. Después de un silencio eterno: "Se anuncia un cambio en las reglas. Ambos tributos... son los vencedores." ${c.s}`); } await tell({ title: 'Silencio', biome: 'corn', text: `Nadie responde. Y entonces ${cap(G.C.name)} se mueve primero... ${c.s}`, cls: 'bad', btn: 'Pelear' }); G.over = false; const r = await fight([G.P], [G.C], { ambush: true, noflee: true, banner: 'UNO SOLO' }); G.over = true; if (!G.P.alive) return gameOver(true); return victory(); }
-  G.P.alive = false; G.P.killer = 'su propia decisión'; G.P.diedDay = G.day; mark(`Te sacrificaste para que ${cap(G.C.name)} gane.`);
+  ach('martir'); G.P.alive = false; G.P.killer = 'su propia decisión'; G.P.diedDay = G.day; mark(`Te sacrificaste para que ${cap(G.C.name)} gane.`);
   return gameOver(true, `Le das la mano a ${cap(G.C.name)}, das un paso atrás y te dejás caer. ${cap(G.C.name)} gana los Juegos. El público llora. Vos te volvés leyenda.`);
 }
 // ---------- Final ----------
 function placeOf() { return aliveT().length + 1; }
 async function victory(txt) {
   G.over = true; busy = false; REC.plays++; REC.wins++; REC.best = 1; REC.kills = Math.max(REC.kills, G.P.kills); saveRec();
+  ach('vencedor'); if (!G.P.kills) ach('pacifista'); if (G.both) ach('juntos'); if (!G.C.alive) ach('solo'); if (Opt.diff > 1) ach('dificil');
   Snd.music('none'); Snd.play('win'); flash('#ffd27a', .6);
   endScreen(true, txt || `${cap(G.P.name)} es el vencedor de los Juegos de La Población.`, G.both ? `${cap(G.P.name)} & ${cap(G.C.name)}` : cap(G.P.name));
 }

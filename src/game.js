@@ -30,6 +30,7 @@ function heal(t, n) { if (!t || !t.alive) return 0; const b = t.hp; t.hp = Math.
 function kill(t, by, how) {
   if (!t.alive) return; t.alive = false; t.hp = 0; t.diedDay = G.day; t.killer = by ? by.name : (how || 'la arena');
   if (by) by.kills++;
+  if (by === G.P && typeof ach === 'function') { ach('primera'); if (G.P.kills >= 5) ach('carnicero'); }
   G.fallenToday.push(t);
   if (t === G.P) mark(`Caíste. ${by ? 'Te mató ' + cap(by.name) : 'Te venció ' + (how || 'la arena')}.`);
   else if (t === G.C) mark(`Murió ${cap(t.name)}, tu compañero.`);

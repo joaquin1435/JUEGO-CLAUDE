@@ -1,7 +1,7 @@
 // ===== UI: helpers de pantalla, modales, escenas =====
 const $ = s => document.querySelector(s);
 const app = $('#app');
-const Opt = { speed: 1, music: .5, sfx: .8 };
+const Opt = { speed: 1, music: .5, sfx: .8, diff: 1 };
 try { Object.assign(Opt, JSON.parse(localStorage.getItem('pob_opt') || '{}')); } catch (e) {}
 const saveOpt = () => { try { localStorage.setItem('pob_opt', JSON.stringify(Opt)); } catch (e) {} };
 const sleep = ms => new Promise(r => setTimeout(r, ms / Opt.speed));
