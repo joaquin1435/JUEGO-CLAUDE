@@ -37,7 +37,7 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 .mut{color:var(--mut)}
 .tag{display:inline-block;font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:.25em .6em;border-radius:6px;background:#2a2430;color:var(--gold)}
 /* select grid */
-.grid16{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.grid16{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
 .tcard{position:relative;padding:10px 8px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);text-align:center;transition:.2s;cursor:pointer}
 .tcard img{width:84px;height:84px;display:block;margin:0 auto 6px;border-radius:50%;background:#0f0d12;border:2px solid #2d2833}
 .tcard .nm{font-family:"Bebas Neue";font-size:1.45rem;letter-spacing:.06em;line-height:1}
@@ -49,7 +49,7 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 .tcard.comp img{border-color:var(--blue)}
 .tcard .badge{position:absolute;top:6px;left:6px;font-size:.6rem;font-weight:800;padding:.2em .5em;border-radius:5px}
 .detail{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:16px;align-items:center}
-.detail img{width:120px;height:120px;border-radius:16px;background:#0f0d12}
+.detail img,.detail canvas{width:120px;height:150px;border-radius:16px;background:#0f0d12}
 .stat{display:grid;grid-template-columns:62px 1fr 22px;align-items:center;gap:8px;font-size:.75rem;margin:3px 0}
 .stat .bar{height:7px;border-radius:4px;background:#26212b;overflow:hidden}
 .stat .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ember),var(--gold));border-radius:4px}
@@ -142,7 +142,7 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
  .game{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto}
  .mapwrap{height:52vh;min-height:280px}
  .side{overflow:visible}
- .detail{grid-template-columns:84px 1fr}.detail img{width:84px;height:84px}
+ .detail{grid-template-columns:84px 1fr}.detail img,.detail canvas{width:84px!important;height:105px!important}
  .grid16{grid-template-columns:repeat(4,1fr);gap:6px}
  .tcard{padding:6px 2px}.tcard img{width:58px;height:58px}.tcard .nm{font-size:1.1rem}.tcard .pk{display:none}
  .cbar .row{flex-wrap:nowrap;gap:5px}.cbar .btn{min-width:0;flex:1;font-size:.7rem;padding:.55em .2em}.cbar .btn small{font-size:.62rem}

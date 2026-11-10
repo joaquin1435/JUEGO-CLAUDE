@@ -66,7 +66,7 @@ function screenHow() {
   view(`<div class="screen"><div class="card wrap" style="max-width:720px;padding:24px"><h2 style="font-size:2.6rem">Cómo se juega</h2><div class="howto">
   <h3>La premisa</h3>16 de La Población entran a la arena en 8 duplas. Elegís quién sos y a quién querés de compañero; el resto se sortea. Durante 6 días vas a tener que comer, esconderte, pelear y decidir en quién confiar. Sale uno solo.
   <h3>Cada turno</h3>El día tiene tres momentos: mañana, tarde y noche. En cada uno elegís qué hacer: <b>moverte</b> (tocá un sector vecino en el mapa), <b>explorar</b>, <b>cazar</b>, <b>descansar</b> o <b>esconderte</b>. Después se mueven los demás. Si coinciden en un sector, puede haber pelea.
-  <h3>Lo que tenés que cuidar</h3><b>Vida</b>: si llega a cero, se terminó. <b>Saciedad</b>: baja cada turno; en cero, el hambre te come la vida. <b>Lealtad</b>: si tu compañero confía poco en vos, una noche puede clavarte el cuchillo. <b>Audiencia</b>: el show manda; con fama te llegan regalos de patrocinadores.
+  <h3>Lo que tenés que cuidar</h3><b>Vida</b>: si llega a cero, se terminó. <b>Saciedad</b>: baja cada turno; en cero, el hambre te come la vida. <b>Lealtad</b>: si tu compañero confía poco en vos, una noche puede clavarte el cuchillo. <b>Audiencia</b>: el show manda. De noche, los patrocinadores te dejan canjear audiencia por objetos.
   <h3>Combate</h3>Por turnos. Atacar, golpe fuerte (gasta energía ⚡), cubrirse, usar objetos o huir. Tocá a un enemigo para apuntarle. Cada personaje tiene una habilidad propia.<h3>Alianzas</h3>Otras duplas pueden proponerte una alianza: mientras dure no se atacan. Pero ninguna alianza dura para siempre.<h3>Atajos en PC</h3>En combate, las teclas 1 a 5. En el mapa: E explorar, C cazar, D descansar, S esconderse. En los carteles, los números eligen la opción y Enter continúa.
   <h3>La arena</h3>Hay peligros que cambian cada día y a partir del día 3 la arena se achica: las zonas cerradas matan. El día 6 se termina todo en la Cornucopia.
   </div><button class="btn primary" style="margin-top:18px" id="bk">Entendido</button></div></div>`);
@@ -92,16 +92,29 @@ function screenOptions() {
 }
 // ---------- Selección ----------
 function statRows(ch) { return [['Fuerza', 'fue'], ['Agilidad', 'agi'], ['Astucia', 'ast'], ['Aguante', 'res']].map(([n, k]) => `<div class="stat"><span>${n}</span><div class="bar"><i style="width:${ch[k] * 10}%"></i></div><b>${ch[k]}</b></div>`).join(''); }
+function previewLoop(ch) {
+  const cv = $('#pv'); if (!cv) return; const t = newTribute(ch);
+  const f = { L: t.L, dir: 1, seed: 1, hp: 1, maxhp: 1, weapon: ch.perk === 'arquero' ? 'arco' : ['cuchillo', 'machete', 'lanza', 'hacha', 'maza'][ch.id % 5], anim: { type: 'win', t0: performance.now(), dur: 900 } };
+  (function loop(now) {
+    if (!document.body.contains(cv)) return; requestAnimationFrame(loop);
+    cv.width = 240; cv.height = 300; const c = cv.getContext('2d');
+    const g = c.createRadialGradient(120, 200, 10, 120, 180, 170); g.addColorStop(0, shade(t.L.shirt, -50)); g.addColorStop(1, '#0d0b10'); c.fillStyle = g; c.fillRect(0, 0, 240, 300);
+    f.x = 120; f.y = 285; f.scale = 1.75;
+    if (!f.anim && Math.random() < .006) f.anim = { type: pick(['atk', 'guard', 'win', 'cast']), t0: now, dur: 700, dist: 10 };
+    drawFighter(c, f, now);
+  })(performance.now());
+}
 function screenSelect() {
   let me = null, comp = null, focus = CHARS[0];
   function render() {
     const step = me === null ? 0 : 1;
     view(`<div class="screen" style="justify-content:flex-start"><div class="wrap">
     <div class="title-row"><div><span class="tag">Paso ${step + 1} de 2</span><h2>${step ? 'Elegí a tu compañero' : 'Elegí tu tributo'}</h2></div><button class="btn ghost" id="bk">← Volver</button></div>
-    <div class="card detail"><img src="${portrait(focus, 240)}"><div><div class="disp" style="font-size:2.4rem;line-height:1">${cap(focus.name)}</div><div style="margin:4px 0 8px"><span class="tag">${PERKS[focus.perk].n}</span> <span class="mut" style="font-size:.85rem">${PERKS[focus.perk].d}</span></div>${statRows(focus)}</div></div>
+    <div class="card detail"><canvas id="pv" style="width:120px;height:150px"></canvas><div><div class="disp" style="font-size:2.4rem;line-height:1">${cap(focus.name)}</div><div style="margin:4px 0 8px"><span class="tag">${PERKS[focus.perk].n}</span> <span class="mut" style="font-size:.85rem">${PERKS[focus.perk].d}</span></div>${statRows(focus)}</div></div>
     <div class="grid16" style="margin-top:14px">${CHARS.map(ch => `<div class="tcard ${ch.id === me ? 'sel' : ''} ${ch.id === comp ? 'comp' : ''}" data-id="${ch.id}">${ch.id === me ? '<span class="badge" style="background:var(--ember);color:#000">VOS</span>' : ch.id === comp ? '<span class="badge" style="background:var(--blue);color:#000">DUPLA</span>' : ''}<img src="${portrait(ch, 168)}"><div class="nm">${cap(ch.name)}</div><div class="pk">${PERKS[ch.perk].n}</div></div>`).join('')}</div>
     <div class="card selbar"><div class="mut" style="font-size:.9rem">${me === null ? 'Tocá un tributo para ver sus stats y elegilo.' : comp === null ? `Sos <b style="color:var(--ember)">${cap(CHARS[me].name)}</b>. Ahora elegí con quién entrás.` : `<b style="color:var(--ember)">${cap(CHARS[me].name)}</b> + <b style="color:var(--blue)">${cap(CHARS[comp].name)}</b>. El resto se sortea.`}</div>
     <div style="display:flex;gap:8px">${step && comp === null ? `<button class="btn" id="rnd">🎲 Al azar</button>` : ''}<button class="btn primary" id="ok" ${(step === 0) || comp !== null ? '' : 'disabled'}>${step === 0 ? `Elegir a ${cap(focus.name)}` : 'Al sorteo →'}</button></div></div></div></div>`);
+    previewLoop(focus);
     app.querySelectorAll('.tcard').forEach(el => el.onclick = () => { const id = +el.dataset.id; focus = CHARS[id]; if (step === 1 && id !== me) comp = id; render(); });
     $('#bk').onclick = () => { if (step) { me = null; comp = null; render(); } else screenTitle(); };
     $('#ok').onclick = () => { if (step === 0) { me = focus.id; focus = CHARS[(me + 1) % 16]; render(); } else screenDraw(me, comp); };
@@ -238,7 +251,7 @@ function renderGame() {
   if (!busy && !G.over) saveGame();
   const alive = aliveT().length;
   $('#top').innerHTML = `<div><div class="day">Día ${G.day}<span class="mut" style="font-size:1.1rem"> / 6</span></div><div class="ph">${PHASES[G.phase]}</div></div><div class="spacer"></div>
-  <div class="chip" title="Tributos con vida">👥 ${alive}</div><div class="chip" title="Audiencia: con 25 o más te llegan regalos a la noche">⭐ ${G.fame}</div>${G.hazard ? `<div class="chip" style="border-color:#4a6b2a">${G.hazard.ic} ${G.hazard.n} en ${SECTORS[G.hazard.sec].n}</div>` : ''}${G.allies.length ? `<div class="chip" title="Aliados">🤝 ${G.allies.map(i => G.teams[i].m.filter(t => t.alive).map(t => cap(t.name)).join('/')).join(', ')}</div>` : ''}${G.closed.length ? `<div class="chip" style="border-color:#7a2b2b">⛔ ${G.closed.length} zonas cerradas</div>` : ''}<button class="chip" id="b-menu">☰</button>`;
+  <div class="chip" title="Tributos con vida">👥 ${alive}</div><div class="chip" title="Audiencia: de noche la canjeás con los patrocinadores">⭐ ${G.fame}</div>${G.hazard ? `<div class="chip" style="border-color:#4a6b2a">${G.hazard.ic} ${G.hazard.n} en ${SECTORS[G.hazard.sec].n}</div>` : ''}${G.allies.length ? `<div class="chip" title="Aliados">🤝 ${G.allies.map(i => G.teams[i].m.filter(t => t.alive).map(t => cap(t.name)).join('/')).join(', ')}</div>` : ''}${G.closed.length ? `<div class="chip" style="border-color:#7a2b2b">⛔ ${G.closed.length} zonas cerradas</div>` : ''}<button class="chip" id="b-menu">☰</button>`;
   const cAlive = G.C.alive;
   const acts = [['explore', '🔎', 'Explorar', 'Buscar cosas y problemas'], ['hunt', '🍖', 'Cazar', 'Conseguir comida'], ['rest', '💤', 'Descansar', 'Curarse, más expuesto'], ['hide', '🌿', 'Esconderse', 'Casi no te encuentran']];
   $('#side').innerHTML = `${whoCard(G.P, `<div class="meter hu" style="margin-top:8px"><i style="width:${G.hunger}%"></i></div><div class="ml"><span>🍖 Saciedad ${G.hunger}</span><span>${G.hunger < 25 ? '<b style="color:#ffc94a">¡Hambre!</b>' : ''}</span></div>`)}
@@ -381,7 +394,7 @@ async function nightFall() {
   await new Promise(r => $('#nx').onclick = r);
   screenGame(); Snd.music('map');
   // patrocinadores
-  if (G.fame >= 25) { const n = Math.min(2, Math.floor(G.fame / 25)); G.fame -= n * 25; const gifts = []; for (let i = 0; i < n; i++) gifts.push(give(teamPerk('suerte') ? pick(LOOT_RARE) : rollLoot(.5))); Snd.play('drop'); await tell({ title: '🪂 Patrocinadores', biome: SECTORS[G.sec].b, night: true, text: `Dos pitidos y un paracaídas plateado. Alguien allá afuera apuesta por vos: ${gifts.join(', ')}.`, cls: 'good' }); }
+  await sponsorShop();
   // traición del compañero
   if (G.C.alive && G.P.alive) {
     G.loyalty = clamp(G.loyalty - 4, 0, 100);
@@ -395,6 +408,17 @@ async function nightFall() {
     }
   }
   if (aliveTeams().filter(tm => !tm.player).length === 0) { await finalDilemma(); }
+}
+const SHOP = [['racion', 12], ['agua', 8], ['vendas', 14], ['botiquin', 24], ['arroj', 16], ['polvo', 18], ['escudo', 22], ['humo', 20], ['trampa', 15], ['veneno', 18], ['bomba', 34], ['lanza', 30], ['hacha', 36]];
+async function sponsorShop() {
+  let bought = 0;
+  while (G.fame >= 8 && bought < 3) {
+    const off = shuffle(SHOP.filter(([, c]) => c <= G.fame)).slice(0, 4).map(([id, c]) => [id, teamPerk('suerte') ? Math.round(c * .8) : c]);
+    if (!off.length) break;
+    const i = await ask({ tag: `Audiencia: ⭐ ${G.fame}`, title: '🪂 Patrocinadores', biome: SECTORS[G.sec].b, night: true, text: bought ? '¿Algo más? Los patrocinadores siguen mirando.' : 'Te llega un mensaje: los patrocinadores quieren mandarte algo. Elegí qué pedir con la audiencia que juntaste.', opts: [...off.map(([id, c]) => ({ t: `${ITEMS[id].ic} ${ITEMS[id].n}`, sub: `⭐ ${c}` })), { t: bought ? 'Listo, gracias' : 'Guardar la audiencia para después', cls: 'ghost' }] });
+    if (i >= off.length) break;
+    const [id, c] = off[i]; G.fame -= c; bought++; Snd.play('drop'); toast(`🪂 Llegó: ${give(id)}`);
+  }
 }
 async function newDay() {
   G.feast = G.feast === 1 ? 2 : 0;
@@ -458,6 +482,15 @@ async function gameOver(skipSim, txt) {
   const winT = aliveTeams()[0], winner = winT ? winT.m.filter(t => t.alive).map(t => cap(t.name)).join(' y ') : 'nadie';
   endScreen(false, txt || `${cap(G.P.name)} cayó en el puesto #${place}. ${G.P.killer ? 'Lo mató ' + (typeof G.P.killer === 'string' ? G.P.killer : '') + '.' : ''}`, winner, place);
 }
+function confetti() {
+  const cv = document.createElement('canvas'); cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40'; document.body.appendChild(cv);
+  const W = cv.width = innerWidth, H = cv.height = innerHeight, c = cv.getContext('2d'), t0 = performance.now();
+  const ps = Array.from({ length: 160 }, () => ({ x: Math.random() * W, y: -Math.random() * H, vx: rnd(-1, 1), vy: rnd(2, 5), r: rnd(0, 6), vr: rnd(-.2, .2), w: rnd(5, 10), col: pick(['#ffd27a', '#ff6a2b', '#fff3e2', '#e8b65a', '#c2410c']) }));
+  (function loop(now) {
+    const k = now - t0; if (k > 6000) return cv.remove(); requestAnimationFrame(loop); c.clearRect(0, 0, W, H); c.globalAlpha = k > 4500 ? (6000 - k) / 1500 : 1;
+    ps.forEach(p => { p.x += p.vx + Math.sin(now / 400 + p.r) * .6; p.y += p.vy; p.r += p.vr; if (p.y > H + 10) p.y = -10; c.save(); c.translate(p.x, p.y); c.rotate(p.r); c.fillStyle = p.col; c.fillRect(-p.w / 2, -p.w / 4, p.w, p.w / 2); c.restore(); });
+  })(t0);
+}
 function endScreen(won, txt, winner, place) {
   clearSave();
   BG.set(true);
@@ -469,6 +502,7 @@ function endScreen(won, txt, winner, place) {
   <div class="card" style="margin-top:12px"><div class="sectitle">Los 16</div><div class="grid16" style="padding:12px">${G.all.slice().sort((a, b) => (b.alive - a.alive) || (b.diedDay - a.diedDay)).map(t => `<div class="tcard ${t.alive ? 'sel' : ''}" style="cursor:default"><img src="${portrait(t.ch, 120, t.alive ? 0 : 2)}" class="${t.alive ? '' : 'dead'}"><div class="nm">${cap(t.name)}</div><div class="pk">${t.alive ? 'Sobrevivió' : 'Día ' + t.diedDay + ' · ' + esc(t.killer || '')}${t.kills ? ' · ' + t.kills + '☠' : ''}</div></div>`).join('')}</div></div>
   <div style="display:flex;gap:10px;justify-content:center;margin:20px 0 40px;flex-wrap:wrap"><button class="btn primary" id="again">Jugar otra vez</button><button class="btn" id="home">Menú</button></div></div></div>`);
   $('#again').onclick = screenSelect; $('#home').onclick = screenTitle;
+  if (won) confetti();
 }
 window.__dbg = () => G;
 screenTitle();

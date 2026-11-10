@@ -76,7 +76,7 @@ function aiFight(a, b) {
   const wl = w.m.filter(t => t.alive);
   l.m.filter(t => t.alive).forEach(t => {
     const k = pick(wl);
-    if (Math.random() < .72) { kill(t, k); addLog(FEED_KILL[ri(0, FEED_KILL.length - 1)].replace('{a}', `<b>${cap(k.name)}</b>`).replace('{b}', `<b>${cap(t.name)}</b>`), 'k'); }
+    if (Math.random() < .64) { kill(t, k); addLog(FEED_KILL[ri(0, FEED_KILL.length - 1)].replace('{a}', `<b>${cap(k.name)}</b>`).replace('{b}', `<b>${cap(t.name)}</b>`), 'k'); }
     else { hurt(t, rnd(15, 35)); l.sec = pick(SECTORS[l.sec].adj.filter(x => !G.closed.includes(x)).concat([0])); }
   });
   wl.forEach(t => { if (Math.random() < .6) { const before = t.alive; hurt(t, rnd(6, 30)); if (before && !t.alive) addLog(`<b>${cap(t.name)}</b> ganó la pelea pero murió desangrado`, 'k'); } });
@@ -87,7 +87,7 @@ function aiResolve() {
   for (const tm of aliveTeams()) if (!tm.player) (bySec[tm.sec] = bySec[tm.sec] || []).push(tm);
   for (const sec in bySec) {
     const ts = shuffle(bySec[sec]);
-    for (let i = 0; i + 1 < ts.length; i += 2) if (Math.random() < (+sec === 0 ? .8 : .55)) aiFight(ts[i], ts[i + 1]);
+    for (let i = 0; i + 1 < ts.length; i += 2) if (Math.random() < (+sec === 0 ? .65 : .4)) aiFight(ts[i], ts[i + 1]);
   }
   // peligros y zonas cerradas
   for (const tm of aliveTeams()) {
