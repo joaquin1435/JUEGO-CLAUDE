@@ -89,14 +89,42 @@ function simEnd() {
   <div style="display:flex;gap:10px;justify-content:center;margin:20px 0 40px"><button class="btn primary" id="again">Otra simulación</button><button class="btn" id="home">Menú</button></div></div></div>`);
   Snd.play('win'); confetti(); $('#again').onclick = simStart; $('#home').onclick = screenTitle;
 }
+// ---------- Editor de personajes ----------
+function screenLooks(id) {
+  const ch = CHARS[id], L = lookOf(ch), cur = LOOKS[id] || {};
+  const set = (k, v) => { LOOKS[id] = { ...(LOOKS[id] || {}), [k]: v }; try { localStorage.setItem('pob_looks', JSON.stringify(LOOKS)); } catch (e) {} for (const key in portraitCache) delete portraitCache[key]; screenLooks(id); };
+  const sw = (k, arr) => `<div class="sw">${arr.map(c => `<button style="background:${c}" class="${L[k] === c ? 'on' : ''}" data-k="${k}" data-v="${c}" aria-label="${c}"></button>`).join('')}</div>`;
+  const seg = (k, opts) => `<div class="seg">${opts.map(([v, n]) => `<button class="btn ${L[k] === v ? 'on' : ''}" data-k="${k}" data-n="${v}">${n}</button>`).join('')}</div>`;
+  view(`<div class="screen" style="justify-content:flex-start"><div class="wrap" style="max-width:980px"><div class="title-row"><div><span class="tag">Editor</span><h2>Personajes</h2></div><button class="btn ghost" id="bk">← Menú</button></div>
+  <div class="mini">${CHARS.map(c => `<img src="${portrait(c, 96)}" data-id="${c.id}" class="${c.id === id ? 'on' : ''}" title="${cap(c.name)}">`).join('')}</div>
+  <div class="ed"><div class="card pv"><canvas id="pv"></canvas><div class="disp" style="font-size:2rem">${cap(ch.name)}</div><button class="btn ghost" id="rs" ${LOOKS[id] ? '' : 'disabled'}>Volver al original</button></div>
+  <div class="card" style="padding:6px 18px">
+  <div class="erow"><span>Piel</span>${sw('skin', SKINS)}</div>
+  <div class="erow"><span>Color de pelo</span>${sw('hair', HAIRS)}</div>
+  <div class="erow"><span>Peinado</span>${seg('hs', [[0, 'Corto'], [1, 'Parado'], [2, 'Flequillo'], [3, 'Largo'], [4, 'Rodete'], [5, 'Rapado'], [6, 'Al costado']])}</div>
+  <div class="erow"><span>Remera</span>${sw('shirt', SHIRTS)}</div>
+  <div class="erow"><span>Pantalón</span>${sw('pants', PANTS)}</div>
+  <div class="erow"><span>Barba</span>${seg('beard', [[false, 'No'], [true, 'Sí']])}</div>
+  <div class="erow"><span>Accesorio</span>${seg('acc', [[0, 'Nada'], [1, 'Anteojos'], [2, 'Vincha'], [3, 'Gorra']])}</div>
+  ${L.acc === 3 ? `<div class="erow"><span>Color de gorra</span>${sw('capc', SHIRTS)}</div>` : ''}
+  <div class="erow"><span>Altura</span><input id="e-h" type="range" class="range" min=".85" max="1.15" step=".01" value="${L.h}"></div>
+  <div class="erow"><span>Contextura</span><input id="e-w" type="range" class="range" min=".8" max="1.3" step=".01" value="${L.w}"></div>
+  </div></div></div></div>`);
+  previewLoop(ch);
+  $('#bk').onclick = screenTitle;
+  app.querySelectorAll('.mini img').forEach(i => i.onclick = () => screenLooks(+i.dataset.id));
+  app.querySelectorAll('[data-k]').forEach(b => b.onclick = () => set(b.dataset.k, b.dataset.v !== undefined ? b.dataset.v : (b.dataset.n === 'true' ? true : b.dataset.n === 'false' ? false : +b.dataset.n)));
+  $('#e-h').onchange = e => set('h', +e.target.value); $('#e-w').onchange = e => set('w', +e.target.value);
+  $('#rs').onclick = () => { delete LOOKS[id]; try { localStorage.setItem('pob_looks', JSON.stringify(LOOKS)); } catch (e) {} for (const key in portraitCache) delete portraitCache[key]; screenLooks(id); };
+}
 // ---------- Título ----------
 function screenTitle() {
   BG.set(true); Snd.music('menu');
   view(`<div class="screen" style="padding-bottom:20vh"><div class="logo"><div class="kicker">Los Juegos de</div><h1>LA POBLACIÓN</h1><div class="sub">ARENA · 16</div></div>
-  <div class="menu">${savedInfo() ? `<button class="btn primary" id="b-cont">▶ Continuar <small>${savedInfo()}</small></button>` : ''}<button class="btn ${savedInfo() ? '' : 'primary'}" id="b-play">${savedInfo() ? 'Nueva partida' : '▶ Jugar'}</button><button class="btn" id="b-sim">🎬 Simulación <small>mirá jugar a los 16</small></button><button class="btn" id="b-how">Cómo se juega</button><button class="btn" id="b-ach">🏆 Logros <small>${Object.keys(ACH).length}/${Object.keys(ACHS).length}</small></button><button class="btn" id="b-opt">Opciones</button></div>
+  <div class="menu">${savedInfo() ? `<button class="btn primary" id="b-cont">▶ Continuar <small>${savedInfo()}</small></button>` : ''}<button class="btn ${savedInfo() ? '' : 'primary'}" id="b-play">${savedInfo() ? 'Nueva partida' : '▶ Jugar'}</button><button class="btn" id="b-sim">🎬 Simulación <small>mirá jugar a los 16</small></button><button class="btn" id="b-look">🎨 Personajes <small>cambiales el look</small></button><button class="btn" id="b-how">Cómo se juega</button><button class="btn" id="b-ach">🏆 Logros <small>${Object.keys(ACH).length}/${Object.keys(ACHS).length}</small></button><button class="btn" id="b-opt">Opciones</button></div>
   <p class="mut" style="margin-top:22px;font-size:.8rem;text-align:center">Partidas ${REC.plays} · Victorias ${REC.wins} · Mejor puesto ${REC.best === 16 ? '—' : '#' + REC.best} · Récord de bajas ${REC.kills}</p></div>
   <div class="foot">16 tributos · 8 duplas · 6 días · 1 sobreviviente</div>`);
-  $('#b-play').onclick = screenSelect; $('#b-how').onclick = screenHow; $('#b-opt').onclick = screenOptions; $('#b-ach').onclick = screenAch; $('#b-sim').onclick = simStart; lineup();
+  $('#b-play').onclick = screenSelect; $('#b-how').onclick = screenHow; $('#b-opt').onclick = screenOptions; $('#b-ach').onclick = screenAch; $('#b-sim').onclick = simStart; $('#b-look').onclick = () => screenLooks(0); lineup();
   const bc = $('#b-cont'); if (bc) bc.onclick = () => { if (!loadGame()) { clearSave(); return screenTitle(); } busy = false; Snd.music('map'); screenGame(); toast('Partida recuperada'); };
 }
 function screenHow() {

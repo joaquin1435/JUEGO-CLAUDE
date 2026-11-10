@@ -7,12 +7,15 @@ function seeded(str) { let h = 2166136261; for (const c of str) h = Math.imul(h 
 const SKINS = ['#f2d0b1', '#e7b893', '#d29b72', '#b97d55', '#8d5a3b', '#6b4029'];
 const HAIRS = ['#1b1512', '#3b2516', '#6b3e1f', '#a8692e', '#d9b36a', '#2a2a2a', '#7a1f1f', '#e0e0e0'];
 const SHIRTS = ['#c0392b', '#2e86de', '#27ae60', '#8e44ad', '#e67e22', '#16a085', '#d35400', '#2c3e50', '#b33771', '#3b3b98', '#6ab04c', '#f0932b', '#4b6584', '#a5b1c2', '#eb3b5a', '#20bf6b'];
-function lookOf(ch) {
+let LOOKS = {}; try { LOOKS = JSON.parse(localStorage.getItem('pob_looks') || '{}'); } catch (e) {}
+const PANTS = ['#2b2f3a', '#3a2f25', '#1f2a22', '#30303a', '#5a4a3a', '#1c2b45', '#6b6b6b', '#111111'];
+function lookOf(ch) { return { ...baseLook(ch), ...(LOOKS[ch.id] || {}) }; }
+function baseLook(ch) {
   const r = seeded(ch.name + 'pob');
   return {
     skin: SKINS[Math.floor(r() * SKINS.length)], hair: HAIRS[Math.floor(r() * HAIRS.length)], hs: Math.floor(r() * 7),
     shirt: SHIRTS[ch.id % SHIRTS.length], pants: ['#2b2f3a', '#3a2f25', '#1f2a22', '#30303a'][Math.floor(r() * 4)],
-    eye: r() < .5 ? 0 : 1, beard: r() < .25, acc: Math.floor(r() * 5), brow: r() * .3 - .15, h: 0.95 + r() * 0.12, w: 0.92 + r() * 0.16,
+    eye: r() < .5 ? 0 : 1, beard: r() < .25, acc: (v => v < .62 ? 0 : v < .77 ? 1 : v < .9 ? 2 : 3)(r()), brow: r() * .3 - .15, h: 0.95 + r() * 0.12, w: 0.92 + r() * 0.16,
   };
 }
 function shade(hex, a) { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255; r = clamp(r + a, 0, 255); g = clamp(g + a, 0, 255); b = clamp(b + a, 0, 255); return `rgb(${r|0},${g|0},${b|0})`; }
@@ -30,6 +33,7 @@ function drawHair(c, L, x, y, R, back) {
   else if (s === 5) { c.arc(x, y - R * .2, R * 1.0, Math.PI * 1.1, Math.PI * 1.9); c.quadraticCurveTo(x, y - R * .85, x - R * .8, y - R * .6); }
   else { c.arc(x, y - R * .12, R * 1.03, Math.PI * 1.02, Math.PI * 1.98); c.quadraticCurveTo(x + R * .2, y - R * .5, x - R * 1.0, y - R * .2); }
   c.fill();
+  if (L.acc === 3) { c.fillStyle = L.capc || '#c0392b'; c.beginPath(); c.arc(x, y - R * .2, R * 1.04, Math.PI, 0); c.fill(); c.fillStyle = shade(L.capc || '#c0392b', -30); c.beginPath(); c.ellipse(x + R * .6, y - R * .22, R * .75, R * .16, 0, 0, 7); c.fill(); }
 }
 function drawFace(c, L, x, y, R, mood) {
   // mood: 0 normal, 1 dolor, 2 muerto, 3 furia

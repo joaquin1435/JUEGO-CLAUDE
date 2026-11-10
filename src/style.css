@@ -164,3 +164,15 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 
 .w{opacity:0;animation:wIn .35s forwards;display:inline-block}
 @keyframes wIn{from{opacity:0;transform:translateY(4px);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
+
+.ed{display:grid;grid-template-columns:260px 1fr;gap:16px}
+.ed .pv{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px}
+.ed .pv canvas{width:200px;height:250px;border-radius:14px}
+.erow{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:.85rem}
+.sw{display:flex;flex-wrap:wrap;gap:6px}
+.sw button{width:28px;height:28px;border-radius:8px;border:2px solid transparent}
+.sw button.on{border-color:#fff;box-shadow:0 0 0 2px var(--ember)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}.seg .btn{padding:.45em .8em;font-size:.8rem}.seg .btn.on{border-color:var(--ember);color:var(--ember)}
+.mini{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:14px}
+.mini img{width:100%;border-radius:10px;border:2px solid transparent;cursor:pointer}.mini img.on{border-color:var(--ember)}
+@media (max-width:900px){.ed{grid-template-columns:1fr}.erow{grid-template-columns:90px 1fr}}
