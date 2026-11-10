@@ -72,13 +72,16 @@ async function fight(allies, enemies, opt = {}) {
 
   function calc(a, d, mult = 1) {
     const ta = a.t, w = ta.weapon ? ITEMS[ta.weapon] : null;
+    if (d.evade > 0) { d.evade--; return { hit: false, dmg: 0, crit: false }; }
     let hit = .9 - d.t.agi * .022 - (hasPerk(d.t, 'escurri') ? .15 : 0) - (a.blind > 0 ? .6 : 0) + (ta.weapon === 'hacha' ? -.05 : 0) + (opt.mult || 0);
     if (d.stun > 0) hit = 1;
     let dmg = (3 + ta.fue * 1.3 + (w ? w.w : 0) + (hasPerk(ta, 'carnicero') ? 3 : 0)) * rnd(.85, 1.15) * mult;
     if (hasPerk(ta, 'berserk') && ta.hp < ta.maxhp * .4) dmg *= 1.5;
     if (a.side === 'B') dmg *= Opt.diff || 1;
     const critC = .08 + (hasPerk(ta, 'halcon') ? .15 : 0) + (w && w.crit ? w.crit / 100 : 0) + (hasPerk(ta, 'arquero') && ta.weapon === 'arco' ? .1 : 0);
-    const crit = Math.random() < critC; if (crit) dmg *= 1.65;
+    const crit = a.nextCrit || Math.random() < critC; if (crit) dmg *= 1.65;
+    if (a.fury > 0) { a.fury--; dmg *= 2; } if (d.mark > 0) { d.mark--; dmg *= 1.5; }
+    if (a.nextCrit) { a.nextCrit = false; return { hit: true, dmg, crit }; }
     return { hit: Math.random() < hit, dmg, crit };
   }
   async function strike(a, d, mult = 1, label) {
@@ -88,8 +91,8 @@ async function fight(allies, enemies, opt = {}) {
     else await anim(a, 'atk', 360, { dist: Math.abs(d.x - a.x) - 70 * S });
     if (!r.hit) { anim(d, 'dodge', 420); Parts.text(d.x, d.y - 120 * S, 'ESQUIVA', '#9ad1ff'); Snd.play('miss'); say(`${cap(d.name)} esquiva ${label ? 'el ' + label : 'el golpe'} de ${cap(a.name)}.`); await sleep(450); return; }
     let dmg = r.dmg;
-    if (d.guard) { dmg *= .5; Snd.play('block'); Parts.burst(d.x + 20 * d.dir * -1, d.y - 70 * S, 10, '#9ad1ff', 4, 400, .1, 2.5); }
-    if (d.shield > 0) { dmg *= .5; d.shield--; Snd.play('block'); }
+    if (a.pierce) { a.pierce = false; } else if (d.guard) { dmg *= .5; Snd.play('block'); Parts.burst(d.x + 20 * d.dir * -1, d.y - 70 * S, 10, '#9ad1ff', 4, 400, .1, 2.5); }
+    else if (d.shield > 0) { dmg *= .5; d.shield--; Snd.play('block'); }
     dmg = Math.max(1, Math.round(dmg));
     if (a.coat > 0) { a.coat--; d.poison = 3; }
     if (a.t.weapon === 'maza' && Math.random() < .25) d.stun = 1;
@@ -124,10 +127,29 @@ async function fight(allies, enemies, opt = {}) {
   function talk(f, pool) { f.bubble = { txt: pick(pool), t0: performance.now() }; }
   const enemyTeam = G.teams.find(tm => tm.m.includes(enemies[0]));
   // ---- IA ----
+  async function skill(f, tgt) {
+    const [ic, n] = SKILLS[f.t.perk]; f.usedSkill = true; showBanner(n.toUpperCase(), '#7fd3ff'); talk(f, [n + '!']); Snd.play('crit'); await anim(f, 'cast', 450);
+    const mates = friends(f), fs = foes(f), p = f.t.perk;
+    if (p === 'tanque') { mates.forEach(m => { m.shield = 2; Parts.burst(m.x, m.y - 70 * S, 16, '#9ad1ff', 4, 700, 0, 3); }); say(`${cap(f.name)} cubre a su dupla.`); }
+    else if (p === 'halcon') { f.nextCrit = true; return strike(f, tgt, 1, n); }
+    else if (p === 'carnicero' || p === 'arquero') { for (const e of fs) if (!e.dead) await strike(f, e, .75, n); }
+    else if (p === 'escurri') { f.evade = 2; say(`${cap(f.name)} se mueve como un fantasma.`); }
+    else if (p === 'cocinero' || p === 'resist') { const h = heal(f.t, p === 'resist' ? f.t.maxhp * .3 : 25); Parts.text(f.x, f.y - 125 * S, '+' + h, '#6dffa0'); Snd.play('heal'); say(`${cap(f.name)} recupera ${h}.`); }
+    else if (p === 'medica' || p === 'leal') { const w = (p === 'leal' ? mates.filter(m => m !== f) : mates).sort((a, b) => a.hp / a.maxhp - b.hp / b.maxhp)[0] || f; const h = heal(w.t, p === 'leal' ? 20 : 35); if (p === 'leal') w.shield = 2; Parts.burst(w.x, w.y - 70 * S, 18, '#6dffa0', 3, 800, -.05, 3); Parts.text(w.x, w.y - 125 * S, '+' + h, '#6dffa0'); Snd.play('heal'); say(`${cap(f.name)} cura a ${cap(w.name)}: +${h}`); }
+    else if (p === 'carisma') { tgt.stun = 1; if (f.side === 'A') fame(12); say(`${cap(tgt.name)} se queda mirando el show. Pierde el turno.`); }
+    else if (p === 'rastreo') { tgt.mark = 3; Parts.text(tgt.x, tgt.y - 125 * S, '🎯', '#ff6b5b'); say(`${cap(f.name)} encuentra el punto débil de ${cap(tgt.name)}.`); }
+    else if (p === 'trampera') { tgt.stun = 1; await applyDmg(tgt, 12, f, false); say(`${cap(tgt.name)} pisa la trampa y queda aturdido.`); }
+    else if (p === 'sigilo') { f.pierce = true; return strike(f, tgt, 2, n); }
+    else if (p === 'suerte') { if (Math.random() < .5) { f.nextCrit = true; return strike(f, tgt, 1.8, n); } say('¡Le erra por un pelo!'); Snd.play('miss'); }
+    else if (p === 'estratega') { const m = mates.find(x => x !== f); if (m) { say(`${cap(f.name)}: "¡Ahora, ${cap(m.name)}!"`); await sleep(300); await strike(m, tgt, 1.5, 'plan'); } else return strike(f, tgt, 1.3, n); }
+    else if (p === 'berserk') { hurt(f.t, Math.min(15, f.t.hp - 1)); f.fury = 2; Parts.burst(f.x, f.y - 70 * S, 24, '#ff3b2b', 5, 800, 0, 3); say(`${cap(f.name)} entra en furia.`); }
+    await sleep(500);
+  }
   async function aiTurn(f) {
     const fs = foes(f); if (!fs.length) return;
     const tgt = fs.sort((a, b) => a.hp - b.hp)[0], inv = f.side === 'A' ? G.inv : (enemyTeam ? enemyTeam.inv : []);
     if (f.t.hp < f.t.maxhp * .35) { const h = inv.find(i => ITEMS[i].heal); if (h && Math.random() < .8) return useItem(f, h); }
+    if (!f.usedSkill && Math.random() < .3) return skill(f, tgt);
     if (f.side === 'B') { const off = inv.find(i => ['arroj', 'polvo', 'bomba'].includes(i)); if (off && Math.random() < .3) return useItem(f, off, tgt); }
     if (f.energy >= 3 && Math.random() < .6) { f.energy -= 3; say(`${cap(f.name)} carga un golpe fuerte...`); await sleep(300); return strike(f, tgt, 1.7, 'golpe fuerte'); }
     if (Math.random() < .12) { f.guard = true; f.energy++; anim(f, 'guard', 500); say(`${cap(f.name)} se cubre.`); return sleep(500); }
@@ -143,6 +165,7 @@ async function fight(allies, enemies, opt = {}) {
       const fleeP = clamp(.3 + f.t.agi * .04 + (teamPerk('sigilo') ? .2 : 0) - (opt.final ? 1 : 0), 0, .9);
       actEl.innerHTML = `<button class="btn primary" data-a="atk"><span class="ic">⚔️</span>Atacar</button>
         <button class="btn" data-a="pow" ${f.energy < 3 ? 'disabled' : ''}><span class="ic">💥</span>Golpe fuerte<small>⚡3</small></button>
+        <button class="btn" data-a="skill" ${f.usedSkill ? 'disabled' : ''} title="${SKILLS[f.t.perk][2]}"><span class="ic">${SKILLS[f.t.perk][0]}</span>${SKILLS[f.t.perk][1]}<small>${f.usedSkill ? 'Usada' : '1 vez'}</small></button>
         <button class="btn" data-a="def"><span class="ic">🛡️</span>Cubrirse<small>+⚡</small></button>
         <button class="btn" data-a="item" ${ci.length ? '' : 'disabled'}><span class="ic">🎒</span>Objeto<small>${ci.length}</small></button>
         <button class="btn" data-a="run" ${opt.final || opt.noflee ? 'disabled' : ''}><span class="ic">🏃</span>Huir<small>${Math.round(fleeP * 100)}%</small></button>`;
@@ -179,6 +202,7 @@ async function fight(allies, enemies, opt = {}) {
         say(f.t === G.P ? `Tu turno, <b>${cap(f.name)}</b>.` : `Turno de <b>${cap(f.name)}</b> (tu compañero).`);
         const ch = await playerTurn(f);
         if (ch.a === 'atk') await strike(f, target && !target.dead ? target : foes(f)[0]);
+        else if (ch.a === 'skill') await skill(f, target && !target.dead ? target : foes(f)[0]);
         else if (ch.a === 'pow') { f.energy -= 3; await strike(f, target && !target.dead ? target : foes(f)[0], 1.75, 'golpe fuerte'); }
         else if (ch.a === 'def') { f.guard = true; f.energy++; anim(f, 'guard', 500); say('Te cubrís.'); await sleep(450); }
         else if (ch.a === 'item') { const r = await useItem(f, ch.id, target && !target.dead ? target : foes(f)[0]); if (r === 'fled') { result = 'fled'; break; } }

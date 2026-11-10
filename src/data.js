@@ -76,4 +76,29 @@ const HAZARDS = [
 ];
 const PHASES = ['Mañana', 'Tarde', 'Noche'];
 const FEED_KILL = ['{a} le partió la cabeza a {b}', '{a} sorprendió a {b} por la espalda', '{a} y su compañero acorralaron a {b}', '{a} ganó un duelo brutal contra {b}', '{a} empujó a {b} por un barranco', '{a} le clavó una flecha a {b}', '{a} estranguló a {b} mientras dormía'];
-const FEED_FLAVOR = ['{a} encontró agua limpia.', '{a} se lastimó un tobillo.', '{a} pasó la noche llorando.', '{a} y {b} discutieron a los gritos.', '{a} juntó bayas.', '{a} recibió un regalo de un patrocinador.', '{a} se esconde en un árbol.', '{a} afila un palo.'];
+const KILL_BY = {
+  arco: ['{a} le clavó una flecha a {b} desde lejos', '{a} esperó arriba de un árbol y le disparó a {b}'],
+  cuchillo: ['{a} le clavó el cuchillo a {b}', '{a} sorprendió a {b} por la espalda con un cuchillo'], machete: ['{a} le abrió el pecho a {b} con el machete', '{a} persiguió a {b} machete en mano'],
+  lanza: ['{a} atravesó a {b} con una lanza', '{a} le tiró la lanza a {b} y no falló'], hacha: ['{a} le partió la cabeza a {b} con el hacha', '{a} derribó a {b} de un hachazo'],
+  maza: ['{a} le rompió el cráneo a {b} con la maza', '{a} aplastó a {b} a mazazos'],
+  none: ['{a} ahogó a {b} en el barro', '{a} empujó a {b} por un barranco', '{a} le reventó la cabeza a {b} con una piedra', '{a} ganó a las piñas un duelo brutal contra {b}'],
+  night: ['{a} estranguló a {b} mientras dormía', '{a} encontró a {b} dormido junto al fuego y no lo dudó'],
+};
+const killLine = (k, v) => { const pool = (typeof G !== 'undefined' && G && G.phase === 2 && Math.random() < .5) ? KILL_BY.night : KILL_BY[k.weapon] || KILL_BY.none; return pool[Math.floor(Math.random() * pool.length)].replace('{a}', `<b>${k.name.charAt(0).toUpperCase() + k.name.slice(1)}</b>`).replace('{b}', `<b>${v.name.charAt(0).toUpperCase() + v.name.slice(1)}</b>`); };
+const FEED_FLAVOR = ['{a} encontró agua limpia.', '{a} se lastimó un tobillo.', '{a} pasó la noche llorando.', '{a} y {b} discutieron a los gritos.', '{a} juntó bayas.', '{a} recibió un regalo de un patrocinador.', '{a} se esconde en un árbol.', '{a} afila un palo.',
+  '{a} habla solo en voz alta.', '{a} se pone a cantar bajito para no dormirse.', '{a} intenta pescar con una remera.', '{a} encuentra una mochila vacía y la patea.',
+  '{a} le roba comida a {b} sin que se dé cuenta.', '{a} y {b} se cruzan y se hacen los que no se vieron.', '{a} se corta el pelo con un cuchillo.', '{a} arma un refugio con ramas.',
+  '{a} le grita a la cámara que lo saquen de ahí.', '{a} se queda mirando las estrellas.', '{a} se tropieza y se ríe solo.', '{a} entierra algo y marca el lugar.',
+  '{a} trepa una roca para ver el mapa.', '{a} le salva la vida a {b} y se van cada uno por su lado.', '{a} se pelea con un mapache por una lata.'];
+
+// habilidad activa de cada perfil (una vez por pelea)
+const SKILLS = {
+  tanque: ['🧱', 'Muralla', 'Escudo para vos y tu compañero.'], halcon: ['🎯', 'Tiro certero', 'Golpe crítico asegurado.'],
+  carnicero: ['🌪️', 'Masacre', 'Le pega a todos los enemigos.'], escurri: ['💨', 'Finta', 'Esquivás los próximos 2 ataques.'],
+  cocinero: ['🍖', 'Bocado', 'Te curás 25 de vida.'], medica: ['💉', 'Primeros auxilios', 'Cura 35 al aliado más herido.'],
+  carisma: ['🎤', 'El show', 'Distraés al enemigo (pierde el turno) y +12 audiencia.'], rastreo: ['🔍', 'Punto débil', 'El objetivo recibe +50% de daño por 3 golpes.'],
+  trampera: ['🪤', 'Trampa rápida', '12 de daño y aturde al objetivo.'], sigilo: ['🗡️', 'Puñalada', 'Doble daño, atraviesa la guardia.'],
+  suerte: ['🎲', 'A todo o nada', '50%: triple daño. 50%: le errás.'], estratega: ['♟️', 'Plan', 'Tu compañero ataca ya, con +50%.'],
+  berserk: ['😤', 'Furia', 'Perdés 15 de vida y tus próximos 2 golpes pegan doble.'], leal: ['🤝', 'Por mi dupla', 'Cura 20 a tu compañero y le da escudo.'],
+  resist: ['🫀', 'Segundo aire', 'Recuperás 30% de tu vida.'], arquero: ['🏹', 'Lluvia de flechas', 'Le pega a todos los enemigos.'],
+};

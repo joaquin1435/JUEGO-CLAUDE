@@ -52,14 +52,51 @@ function loadGame() {
   } catch (e) { return false; }
 }
 const savedInfo = () => { try { const d = JSON.parse(localStorage.getItem('pob_save') || 'null'); return d && `${cap(CHARS[d.all[d.P].ch].name)} · Día ${d.day}`; } catch (e) { return null; } };
+// ---------- Simulación (sin jugador) ----------
+let SIM = null;
+async function simStart() {
+  startGame(...shuffle(CHARS.map(c => c.id)).slice(0, 2)); G.teams[0].player = false; G.sim = true; G.inv = [];
+  SIM = { shown: 0 };
+  view(`<div class="screen" style="justify-content:flex-start"><div class="wrap"><div class="title-row"><div><span class="tag">Simulación</span><h2>Las ocho duplas</h2></div><button class="btn ghost" id="bk">← Menú</button></div><div class="pairs">${G.teams.map(tm => `<div class="pair"><img src="${portrait(tm.m[0].ch, 96)}"><img src="${portrait(tm.m[1].ch, 96)}" style="margin-left:-18px"><div><div class="dn">Dupla ${tm.id + 1}</div><div class="disp" style="font-size:1.35rem">${cap(tm.m[0].name)} & ${cap(tm.m[1].name)}</div></div></div>`).join('')}</div>
+  <div style="text-align:center;margin-top:20px;display:flex;gap:10px;justify-content:center"><button class="btn" id="rr">🎲 Otro sorteo</button><button class="btn primary" id="go">Empezar</button></div></div></div>`);
+  $('#bk').onclick = screenTitle; $('#rr').onclick = simStart; $('#go').onclick = () => { Snd.play('gong'); G.teams.forEach(tm => tm.sec = 0); aiResolve(); G.teams.forEach(tm => tm.sec = Math.random() < .3 ? 0 : pick(SECTORS[0].adj)); simShow('El baño de sangre'); };
+}
+function simShow(title, night) {
+  const ev = G.log.slice(0, G.log.length - SIM.shown).reverse(); SIM.shown = G.log.length;
+  const fallen = G.fallenToday.slice(); if (night) G.fallenToday = [];
+  const left = aliveTeams();
+  const face = html => { const m = G.all.filter(t => html.toLowerCase().includes('<b>' + t.name + '</b>')).slice(0, 2); return m.map(t => `<img src="${portrait(t.ch, 80, t.alive ? 0 : 2)}" style="width:40px;height:40px;border-radius:50%">`).join(''); };
+  view(`<div class="screen" style="justify-content:flex-start${night ? ';background:radial-gradient(ellipse at top,#121a35,#05060c 70%)' : ''}"><div class="wrap" style="max-width:760px"><div class="title-row"><div><span class="tag">Simulación · quedan ${aliveT().length}</span><h2>${title}</h2></div><button class="btn ghost" id="bk">← Menú</button></div>
+  ${night ? `<div class="fallen">${fallen.length ? fallen.map(t => `<div><img src="${portrait(t.ch, 160)}"><span>${cap(t.name)}</span></div>`).join('') : '<p class="mut">Hoy no sonó ningún cañón.</p>'}</div>` :
+    `<div class="card" style="padding:6px 0">${ev.length ? ev.map((l, i) => `<div style="display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);animation:fadeIn .4s ${i * .08}s both"><div style="display:flex;min-width:40px">${face(l.html)}</div><div class="${l.cls === 'k' ? '' : 'mut'}" style="${l.cls === 'k' ? 'color:#ffb3a8' : ''}">${l.html}</div></div>`).join('') : '<p class="mut" style="padding:16px">Un rato tranquilo. Nadie se cruzó con nadie.</p>'}</div>`}
+  <div style="text-align:center;margin:20px 0 40px"><button class="btn primary" id="nx">${left.length <= 1 ? 'Ver al ganador' : 'Seguir'}</button></div></div></div>`);
+  if (night && fallen.length) fallen.forEach((t, i) => setTimeout(() => Snd.play('cannon'), i * 700));
+  $('#bk').onclick = screenTitle; $('#nx').onclick = simNext;
+}
+function simNext() {
+  if (aliveTeams().length <= 1) return simEnd();
+  if (G.phase > 2) { G.day++; G.phase = 0; const ring = [1, 2, 3, 4, 5, 6, 7, 8].filter(s => !G.closed.includes(s)); if (G.day >= 3 && ring.length > 2) for (let k = 0; k < 2; k++) G.closed.push(ring.splice(ri(0, ring.length - 1), 1)[0]); G.hazard = ring.length ? { ...pick(HAZARDS), sec: pick(ring) } : null; if (G.hazard) addLog(`${G.hazard.ic} ${G.hazard.n} en ${SECTORS[G.hazard.sec].n}.`); }
+  if (G.day >= 6) { addLog('<b>El Consejo los obliga a todos a ir a la Cornucopia.</b>'); let ts = aliveTeams(); while (ts.length > 1) { const [a, b] = shuffle(ts); aiFight(a, b); ts = aliveTeams(); } return simShow('El final'); }
+  aiMove(); aiResolve();
+  if (G.phase === 2) { aiNightBetrayals(); G.phase++; return simShow(`Día ${G.day} · Noche`, true); }
+  const t = `Día ${G.day} · ${PHASES[G.phase]}`; G.phase++; simShow(t);
+}
+function simEnd() {
+  const w = aliveTeams()[0], win = w ? w.m.filter(t => t.alive) : [];
+  view(`<div class="screen"><div class="wrap" style="max-width:820px;text-align:center"><span class="tag">Simulación terminada</span><div class="endbig disp" style="color:var(--gold);margin-top:10px">${win.map(t => cap(t.name)).join(' & ') || 'Nadie'}</div><p class="mut">${win.length > 1 ? 'Ganan los dos: el Consejo no se animó a separarlos.' : 'Vencedor de los Juegos de La Población'}</p>
+  <div style="display:flex;justify-content:center;gap:10px;margin:18px 0">${win.map(t => `<img src="${portrait(t.ch, 200)}" style="width:110px;height:110px;border-radius:50%;border:3px solid var(--gold)">`).join('')}</div>
+  <div class="card"><div class="sectitle">Ranking de bajas</div><div class="grid16" style="padding:12px">${G.all.slice().sort((a, b) => b.kills - a.kills || (b.alive - a.alive) || b.diedDay - a.diedDay).map(t => `<div class="tcard ${t.alive ? 'sel' : ''}" style="cursor:default"><img src="${portrait(t.ch, 120, t.alive ? 0 : 2)}"><div class="nm">${cap(t.name)}</div><div class="pk">${t.kills}☠ · ${t.alive ? 'vivo' : 'día ' + t.diedDay}</div></div>`).join('')}</div></div>
+  <div style="display:flex;gap:10px;justify-content:center;margin:20px 0 40px"><button class="btn primary" id="again">Otra simulación</button><button class="btn" id="home">Menú</button></div></div></div>`);
+  Snd.play('win'); confetti(); $('#again').onclick = simStart; $('#home').onclick = screenTitle;
+}
 // ---------- Título ----------
 function screenTitle() {
   BG.set(true); Snd.music('menu');
   view(`<div class="screen" style="padding-bottom:20vh"><div class="logo"><div class="kicker">Los Juegos de</div><h1>LA POBLACIÓN</h1><div class="sub">ARENA · 16</div></div>
-  <div class="menu">${savedInfo() ? `<button class="btn primary" id="b-cont">▶ Continuar <small>${savedInfo()}</small></button>` : ''}<button class="btn ${savedInfo() ? '' : 'primary'}" id="b-play">${savedInfo() ? 'Nueva partida' : '▶ Jugar'}</button><button class="btn" id="b-how">Cómo se juega</button><button class="btn" id="b-ach">🏆 Logros <small>${Object.keys(ACH).length}/${Object.keys(ACHS).length}</small></button><button class="btn" id="b-opt">Opciones</button></div>
+  <div class="menu">${savedInfo() ? `<button class="btn primary" id="b-cont">▶ Continuar <small>${savedInfo()}</small></button>` : ''}<button class="btn ${savedInfo() ? '' : 'primary'}" id="b-play">${savedInfo() ? 'Nueva partida' : '▶ Jugar'}</button><button class="btn" id="b-sim">🎬 Simulación <small>mirá jugar a los 16</small></button><button class="btn" id="b-how">Cómo se juega</button><button class="btn" id="b-ach">🏆 Logros <small>${Object.keys(ACH).length}/${Object.keys(ACHS).length}</small></button><button class="btn" id="b-opt">Opciones</button></div>
   <p class="mut" style="margin-top:22px;font-size:.8rem;text-align:center">Partidas ${REC.plays} · Victorias ${REC.wins} · Mejor puesto ${REC.best === 16 ? '—' : '#' + REC.best} · Récord de bajas ${REC.kills}</p></div>
   <div class="foot">16 tributos · 8 duplas · 6 días · 1 sobreviviente</div>`);
-  $('#b-play').onclick = screenSelect; $('#b-how').onclick = screenHow; $('#b-opt').onclick = screenOptions; $('#b-ach').onclick = screenAch; lineup();
+  $('#b-play').onclick = screenSelect; $('#b-how').onclick = screenHow; $('#b-opt').onclick = screenOptions; $('#b-ach').onclick = screenAch; $('#b-sim').onclick = simStart; lineup();
   const bc = $('#b-cont'); if (bc) bc.onclick = () => { if (!loadGame()) { clearSave(); return screenTitle(); } busy = false; Snd.music('map'); screenGame(); toast('Partida recuperada'); };
 }
 function screenHow() {
@@ -67,7 +104,7 @@ function screenHow() {
   <h3>La premisa</h3>16 de La Población entran a la arena en 8 duplas. Elegís quién sos y a quién querés de compañero; el resto se sortea. Durante 6 días vas a tener que comer, esconderte, pelear y decidir en quién confiar. Sale uno solo.
   <h3>Cada turno</h3>El día tiene tres momentos: mañana, tarde y noche. En cada uno elegís qué hacer: <b>moverte</b> (tocá un sector vecino en el mapa), <b>explorar</b>, <b>cazar</b>, <b>descansar</b> o <b>esconderte</b>. Después se mueven los demás. Si coinciden en un sector, puede haber pelea.
   <h3>Lo que tenés que cuidar</h3><b>Vida</b>: si llega a cero, se terminó. <b>Saciedad</b>: baja cada turno; en cero, el hambre te come la vida. <b>Lealtad</b>: si tu compañero confía poco en vos, una noche puede clavarte el cuchillo. <b>Audiencia</b>: el show manda. De noche, los patrocinadores te dejan canjear audiencia por objetos.
-  <h3>Combate</h3>Por turnos. Atacar, golpe fuerte (gasta energía ⚡), cubrirse, usar objetos o huir. Tocá a un enemigo para apuntarle. Cada personaje tiene una habilidad propia.<h3>Alianzas</h3>Otras duplas pueden proponerte una alianza: mientras dure no se atacan. Pero ninguna alianza dura para siempre.<h3>Atajos en PC</h3>En combate, las teclas 1 a 5. En el mapa: E explorar, C cazar, D descansar, S esconderse. En los carteles, los números eligen la opción y Enter continúa.
+  <h3>Combate</h3>Por turnos. Atacar, golpe fuerte (gasta energía ⚡), cubrirse, usar objetos o huir. Tocá a un enemigo para apuntarle. Cada personaje tiene una habilidad pasiva y un poder especial que se usa una vez por pelea (también los enemigos).<h3>Alianzas</h3>Otras duplas pueden proponerte una alianza: mientras dure no se atacan. Pero ninguna alianza dura para siempre.<h3>Atajos en PC</h3>En combate, las teclas 1 a 5. En el mapa: E explorar, C cazar, D descansar, S esconderse. En los carteles, los números eligen la opción y Enter continúa.
   <h3>La arena</h3>Hay peligros que cambian cada día y a partir del día 3 la arena se achica: las zonas cerradas matan. El día 6 se termina todo en la Cornucopia.
   </div><button class="btn primary" style="margin-top:18px" id="bk">Entendido</button></div></div>`);
   $('#bk').onclick = screenTitle;

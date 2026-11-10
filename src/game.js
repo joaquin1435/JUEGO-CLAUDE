@@ -30,7 +30,7 @@ function heal(t, n) { if (!t || !t.alive) return 0; const b = t.hp; t.hp = Math.
 function kill(t, by, how) {
   if (!t.alive) return; t.alive = false; t.hp = 0; t.diedDay = G.day; t.killer = by ? by.name : (how || 'la arena');
   if (by) by.kills++;
-  if (by === G.P && typeof ach === 'function') { ach('primera'); if (G.P.kills >= 5) ach('carnicero'); }
+  if (by === G.P && !G.sim && typeof ach === 'function') { ach('primera'); if (G.P.kills >= 5) ach('carnicero'); }
   G.fallenToday.push(t);
   if (t === G.P) mark(`Caíste. ${by ? 'Te mató ' + cap(by.name) : 'Te venció ' + (how || 'la arena')}.`);
   else if (t === G.C) mark(`Murió ${cap(t.name)}, tu compañero.`);
@@ -76,7 +76,7 @@ function aiFight(a, b) {
   const wl = w.m.filter(t => t.alive);
   l.m.filter(t => t.alive).forEach(t => {
     const k = pick(wl);
-    if (Math.random() < .64) { kill(t, k); addLog(FEED_KILL[ri(0, FEED_KILL.length - 1)].replace('{a}', `<b>${cap(k.name)}</b>`).replace('{b}', `<b>${cap(t.name)}</b>`), 'k'); }
+    if (Math.random() < .64) { kill(t, k); addLog(killLine(k, t), 'k'); }
     else { hurt(t, rnd(15, 35)); l.sec = pick(SECTORS[l.sec].adj.filter(x => !G.closed.includes(x)).concat([0])); }
   });
   wl.forEach(t => { if (Math.random() < .6) { const before = t.alive; hurt(t, rnd(6, 30)); if (before && !t.alive) addLog(`<b>${cap(t.name)}</b> ganó la pelea pero murió desangrado`, 'k'); } });
@@ -95,7 +95,7 @@ function aiResolve() {
     if (G.closed.includes(tm.sec)) tm.m.forEach(t => { if (t.alive) { hurt(t, 30); if (!t.alive) { t.killer = 'la zona cerrada'; addLog(`<b>${cap(t.name)}</b> no salió a tiempo de la zona cerrada`, 'k'); } } });
     if (G.hazard && G.hazard.sec === tm.sec && Math.random() < .6) tm.m.forEach(t => { if (t.alive) { hurt(t, G.hazard.dmg); if (!t.alive) { t.killer = G.hazard.n.toLowerCase(); addLog(`<b>${cap(t.name)}</b> murió por ${G.hazard.n.toLowerCase()}`, 'k'); } } });
   }
-  if (Math.random() < .35) { const t = pick(aliveT().filter(t => t.team !== 0)); if (t) { const o = pick(aliveT().filter(x => x !== t)) || t; addLog(pick(FEED_FLAVOR).replace('{a}', `<b>${cap(t.name)}</b>`).replace('{b}', `<b>${cap(o.name)}</b>`)); } }
+  for (let n = 0; n < (G.sim ? 3 : 1); n++) if (Math.random() < (G.sim ? .7 : .35)) { const t = pick(aliveT().filter(t => G.sim || t.team !== 0)); if (t) { const o = pick(aliveT().filter(x => x !== t)) || t; addLog(pick(FEED_FLAVOR).replace('{a}', `<b>${cap(t.name)}</b>`).replace('{b}', `<b>${cap(o.name)}</b>`)); } }
 }
 function aiNightBetrayals() {
   for (const tm of aliveTeams()) {
