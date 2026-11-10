@@ -133,7 +133,7 @@ function drawFighter(c, f, now) {
   c.restore();
   if (f.bubble && now - f.bubble.t0 < 2200 && !f.dead) {
     const k = now - f.bubble.t0, a = k < 150 ? k / 150 : k > 1900 ? (2200 - k) / 300 : 1, fs = Math.round(12 * s);
-    c.save(); c.globalAlpha = a; c.font = `700 ${fs}px Inter,sans-serif`; const tw = c.measureText(f.bubble.txt).width, bx = clamp(f.x - tw / 2 - 10, 4, c.canvas.width - tw - 24), by = f.y - 190 * s - (1 - a) * 8;
+    c.save(); c.globalAlpha = a; c.font = `700 ${fs}px Inter,sans-serif`; const tw = c.measureText(f.bubble.txt).width, bx = clamp(f.x - tw / 2 - 10, 4, c.canvas.width - tw - 24), by = f.y - 212 * s - (1 - a) * 8;
     c.fillStyle = '#fff'; c.beginPath(); c.roundRect ? c.roundRect(bx, by, tw + 20, fs + 14, 10) : c.rect(bx, by, tw + 20, fs + 14); c.fill();
     c.beginPath(); c.moveTo(f.x - 6, by + fs + 13); c.lineTo(f.x + 6, by + fs + 13); c.lineTo(f.x, by + fs + 22); c.fill();
     c.fillStyle = '#111'; c.textAlign = 'left'; c.fillText(f.bubble.txt, bx + 10, by + fs + 3); c.restore();
