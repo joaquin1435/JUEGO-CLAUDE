@@ -1,8 +1,8 @@
-:root{--bg:#0b0a0d;--panel:#15131a;--panel2:#1d1a23;--line:#2c2833;--txt:#ece6dc;--mut:#9a9198;--ember:#ff6a2b;--gold:#e8b65a;--red:#e2403a;--green:#4ec27a;--blue:#4aa3ff;--purple:#a879ff;--r:14px}
+:root{color-scheme:dark;--bg:#0b0a0d;--panel:#15131a;--panel2:#1d1a23;--line:#2c2833;--txt:#ece6dc;--mut:#9a9198;--ember:#ff6a2b;--gold:#e8b65a;--red:#e2403a;--green:#4ec27a;--blue:#4aa3ff;--purple:#a879ff;--r:14px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--txt);font-family:Inter,system-ui,sans-serif;overflow:hidden;user-select:none}
 #bg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
-#app{position:fixed;inset:0;z-index:1;overflow:auto}
+#app{position:fixed;inset:0;z-index:1;overflow:auto;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.6));}
 h1,h2,h3,.disp{font-family:"Bebas Neue",Impact,sans-serif;letter-spacing:.04em;font-weight:400}
 button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
