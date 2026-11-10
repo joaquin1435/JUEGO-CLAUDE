@@ -1045,14 +1045,32 @@ function lineup() {
     [...fs].sort((a, b) => a.y - b.y).forEach(f => drawFighter(c, f, now));
   })(performance.now());
 }
+// ---------- Guardado ----------
+function saveGame() {
+  try {
+    const d = { ...G, all: G.all.map(t => ({ ...t, ch: t.ch.id, L: null })), P: G.P.id, C: G.C.id, teams: G.teams.map(tm => ({ ...tm, m: tm.m.map(t => t.id) })), fallenToday: G.fallenToday.map(t => t.id), st: null, lastScene: null, hazard: G.hazard };
+    localStorage.setItem('pob_save', JSON.stringify(d));
+  } catch (e) {}
+}
+function clearSave() { try { localStorage.removeItem('pob_save'); } catch (e) {} }
+function loadGame() {
+  try {
+    const d = JSON.parse(localStorage.getItem('pob_save') || 'null'); if (!d) return false;
+    const all = d.all.map(t => ({ ...t, ch: CHARS[t.ch], L: lookOf(CHARS[t.ch]) }));
+    G = { ...d, all, P: all[d.P], C: all[d.C], teams: d.teams.map(tm => ({ ...tm, m: tm.m.map(i => all[i]) })), fallenToday: d.fallenToday.map(i => all[i]) };
+    return true;
+  } catch (e) { return false; }
+}
+const savedInfo = () => { try { const d = JSON.parse(localStorage.getItem('pob_save') || 'null'); return d && `${cap(CHARS[d.all[d.P].ch].name)} · Día ${d.day}`; } catch (e) { return null; } };
 // ---------- Título ----------
 function screenTitle() {
   BG.set(true); Snd.music('menu');
   view(`<div class="screen" style="padding-bottom:20vh"><div class="logo"><div class="kicker">Los Juegos de</div><h1>LA POBLACIÓN</h1><div class="sub">ARENA · 16</div></div>
-  <div class="menu"><button class="btn primary" id="b-play">▶ Jugar</button><button class="btn" id="b-how">Cómo se juega</button><button class="btn" id="b-ach">🏆 Logros <small>${Object.keys(ACH).length}/${Object.keys(ACHS).length}</small></button><button class="btn" id="b-opt">Opciones</button></div>
+  <div class="menu">${savedInfo() ? `<button class="btn primary" id="b-cont">▶ Continuar <small>${savedInfo()}</small></button>` : ''}<button class="btn ${savedInfo() ? '' : 'primary'}" id="b-play">${savedInfo() ? 'Nueva partida' : '▶ Jugar'}</button><button class="btn" id="b-how">Cómo se juega</button><button class="btn" id="b-ach">🏆 Logros <small>${Object.keys(ACH).length}/${Object.keys(ACHS).length}</small></button><button class="btn" id="b-opt">Opciones</button></div>
   <p class="mut" style="margin-top:22px;font-size:.8rem;text-align:center">Partidas ${REC.plays} · Victorias ${REC.wins} · Mejor puesto ${REC.best === 16 ? '—' : '#' + REC.best} · Récord de bajas ${REC.kills}</p></div>
   <div class="foot">16 tributos · 8 duplas · 6 días · 1 sobreviviente</div>`);
   $('#b-play').onclick = screenSelect; $('#b-how').onclick = screenHow; $('#b-opt').onclick = screenOptions; $('#b-ach').onclick = screenAch; lineup();
+  const bc = $('#b-cont'); if (bc) bc.onclick = () => { if (!loadGame()) { clearSave(); return screenTitle(); } busy = false; Snd.music('map'); screenGame(); toast('Partida recuperada'); };
 }
 function screenHow() {
   view(`<div class="screen"><div class="card wrap" style="max-width:720px;padding:24px"><h2 style="font-size:2.6rem">Cómo se juega</h2><div class="howto">
@@ -1227,6 +1245,7 @@ function whoCard(t, extra) {
 }
 function renderGame() {
   if (!G || !$('#top')) return;
+  if (!busy && !G.over) saveGame();
   const alive = aliveT().length;
   $('#top').innerHTML = `<div><div class="day">Día ${G.day}<span class="mut" style="font-size:1.1rem"> / 6</span></div><div class="ph">${PHASES[G.phase]}</div></div><div class="spacer"></div>
   <div class="chip" title="Tributos con vida">👥 ${alive}</div><div class="chip" title="Audiencia: con 25 o más te llegan regalos a la noche">⭐ ${G.fame}</div>${G.hazard ? `<div class="chip" style="border-color:#4a6b2a">${G.hazard.ic} ${G.hazard.n} en ${SECTORS[G.hazard.sec].n}</div>` : ''}${G.allies.length ? `<div class="chip" title="Aliados">🤝 ${G.allies.map(i => G.teams[i].m.filter(t => t.alive).map(t => cap(t.name)).join('/')).join(', ')}</div>` : ''}${G.closed.length ? `<div class="chip" style="border-color:#7a2b2b">⛔ ${G.closed.length} zonas cerradas</div>` : ''}<button class="chip" id="b-menu">☰</button>`;
@@ -1248,7 +1267,7 @@ async function pauseMenu() {
   if (busy) return;
   const i = await ask({ title: 'Pausa', biome: SECTORS[G.sec].b, text: `Día ${G.day}, ${PHASES[G.phase].toLowerCase()}. Quedan ${aliveT().length} con vida.`, opts: [{ t: 'Seguir jugando', cls: 'primary' }, { t: 'Opciones de sonido', sub: `Música ${Math.round(Opt.music * 100)}%` }, { t: 'Abandonar partida', cls: 'danger' }] });
   if (i === 1) { Opt.music = Opt.music > 0 ? 0 : .5; Snd.setVol(Opt.music, Opt.sfx); saveOpt(); toast(Opt.music ? 'Música activada' : 'Música apagada'); }
-  if (i === 2) { G.over = true; screenTitle(); }
+  if (i === 2) { G.over = true; clearSave(); screenTitle(); }
 }
 async function itemMenu(id) {
   if (busy) return; killTip(); const it = ITEMS[id];
@@ -1450,6 +1469,7 @@ async function gameOver(skipSim, txt) {
   endScreen(false, txt || `${cap(G.P.name)} cayó en el puesto #${place}. ${G.P.killer ? 'Lo mató ' + (typeof G.P.killer === 'string' ? G.P.killer : '') + '.' : ''}`, winner, place);
 }
 function endScreen(won, txt, winner, place) {
+  clearSave();
   BG.set(true);
   view(`<div class="screen"><div class="wrap" style="max-width:820px"><div style="text-align:center"><span class="tag">${won ? 'Vencedor' : 'Fin del juego'}</span><div class="endbig disp" style="margin-top:10px;${won ? 'color:var(--gold)' : 'color:#ff6b5b'}">${won ? '¡GANASTE!' : 'CAÍSTE'}</div>
   <div style="display:flex;justify-content:center;gap:10px;margin:18px 0"><img src="${portrait(G.P.ch, 200, won ? 0 : 2)}" style="width:110px;height:110px;border-radius:50%;border:3px solid ${won ? 'var(--gold)' : '#555'}">${G.both ? `<img src="${portrait(G.C.ch, 200)}" style="width:110px;height:110px;border-radius:50%;border:3px solid var(--gold)">` : ''}</div>
