@@ -48,7 +48,7 @@ function screenHow() {
   <h3>La premisa</h3>16 de La Población entran a la arena en 8 duplas. Elegís quién sos y a quién querés de compañero; el resto se sortea. Durante 6 días vas a tener que comer, esconderte, pelear y decidir en quién confiar. Sale uno solo.
   <h3>Cada turno</h3>El día tiene tres momentos: mañana, tarde y noche. En cada uno elegís qué hacer: <b>moverte</b> (tocá un sector vecino en el mapa), <b>explorar</b>, <b>cazar</b>, <b>descansar</b> o <b>esconderte</b>. Después se mueven los demás. Si coinciden en un sector, puede haber pelea.
   <h3>Lo que tenés que cuidar</h3><b>Vida</b>: si llega a cero, se terminó. <b>Saciedad</b>: baja cada turno; en cero, el hambre te come la vida. <b>Lealtad</b>: si tu compañero confía poco en vos, una noche puede clavarte el cuchillo. <b>Audiencia</b>: el show manda; con fama te llegan regalos de patrocinadores.
-  <h3>Combate</h3>Por turnos. Atacar, golpe fuerte (gasta energía ⚡), cubrirse, usar objetos o huir. Tocá a un enemigo para apuntarle. Cada personaje tiene una habilidad propia.
+  <h3>Combate</h3>Por turnos. Atacar, golpe fuerte (gasta energía ⚡), cubrirse, usar objetos o huir. Tocá a un enemigo para apuntarle. Cada personaje tiene una habilidad propia.<h3>Alianzas</h3>Otras duplas pueden proponerte una alianza: mientras dure no se atacan. Pero ninguna alianza dura para siempre.<h3>Atajos en PC</h3>En combate, las teclas 1 a 5. En el mapa: E explorar, C cazar, D descansar, S esconderse. En los carteles, los números eligen la opción y Enter continúa.
   <h3>La arena</h3>Hay peligros que cambian cada día y a partir del día 3 la arena se achica: las zonas cerradas matan. El día 6 se termina todo en la Cornucopia.
   </div><button class="btn primary" style="margin-top:18px" id="bk">Entendido</button></div></div>`);
   $('#bk').onclick = screenTitle;
@@ -60,11 +60,13 @@ function screenOptions() {
   <div class="opt-row"><span>Efectos</span><input type="range" class="range" style="width:55%" min="0" max="1" step=".05" value="${Opt.sfx}" id="o-s"></div>
   <div class="opt-row"><span>Velocidad de animaciones</span><select id="o-v" class="btn" style="padding:.5em">${Object.entries(sp).map(([k, v]) => `<option value="${k}" ${+k === Opt.speed ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
   <div class="opt-row"><span>Dificultad</span><select id="o-d" class="btn" style="padding:.5em">${[[.75, 'Fácil'], [1, 'Normal'], [1.3, 'Difícil']].map(([k, v]) => `<option value="${k}" ${k === Opt.diff ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+  <div class="opt-row"><span>Controlar a tu compañero en combate</span><input type="checkbox" id="o-c" ${Opt.ctrl ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--ember)"></div>
   <div class="opt-row"><span>Borrar récords</span><button class="btn danger" id="o-r">Borrar</button></div>
   <button class="btn primary" style="margin-top:18px;width:100%" id="bk">Listo</button></div></div>`);
   $('#o-m').oninput = e => { Opt.music = +e.target.value; Snd.setVol(Opt.music, Opt.sfx); saveOpt(); };
   $('#o-s').oninput = e => { Opt.sfx = +e.target.value; Snd.setVol(Opt.music, Opt.sfx); saveOpt(); Snd.play('hit'); };
   $('#o-v').onchange = e => { Opt.speed = +e.target.value; saveOpt(); };
+  $('#o-c').onchange = e => { Opt.ctrl = e.target.checked; saveOpt(); };
   $('#o-d').onchange = e => { Opt.diff = +e.target.value; saveOpt(); };
   $('#o-r').onclick = () => { REC = { plays: 0, wins: 0, kills: 0, best: 16 }; saveRec(); toast('Récords borrados'); };
   $('#bk').onclick = screenTitle;
@@ -99,7 +101,21 @@ async function screenDraw(me, comp) {
     d.innerHTML = `<img src="${portrait(tm.m[0].ch, 96)}"><img src="${portrait(tm.m[1].ch, 96)}" style="margin-left:-18px"><div><div class="dn">Dupla ${tm.id + 1}</div><div class="disp" style="font-size:1.35rem">${cap(tm.m[0].name)} & ${cap(tm.m[1].name)}</div></div>`;
     box.appendChild(d); Snd.play('tick'); await sleep(tm.player ? 600 : 380);
   }
-  Snd.play('gong'); const go = $('#go'); go.style.visibility = 'visible'; go.onclick = countdown;
+  Snd.play('gong'); const go = $('#go'); go.style.visibility = 'visible'; go.onclick = preGame;
+}
+async function preGame() {
+  BG.set(true); view('<div class="screen"></div>');
+  const i = await ask({ tag: 'Antes de los Juegos', title: 'El entrenamiento', biome: 'ruins', faces: [G.P], text: 'Tres días en el centro de entrenamiento. Los demás te miran de reojo. Tenés tiempo para enfocarte en una sola cosa.', opts: [
+    { t: '🏋️ Levantar peso', sub: '+2 Fuerza' }, { t: '🤸 Pista de obstáculos', sub: '+2 Agilidad' }, { t: '🧠 Estación de supervivencia', sub: '+2 Astucia' }, { t: '🗡️ Practicar con armas', sub: 'Arrancás con un machete' }] });
+  if (i === 0) G.P.fue += 2; else if (i === 1) G.P.agi += 2; else if (i === 2) G.P.ast += 2; else G.P.weapon = G.P.weapon || 'machete';
+  const sc = clamp(Math.round((G.P.fue + G.P.agi + G.P.ast + G.P.res) / 4 + rnd(-2, 3)), 1, 12); fame(Math.max(0, sc - 5) * 2);
+  Snd.play(sc >= 8 ? 'win' : 'click');
+  await tell({ tag: 'Sesión privada', title: `Puntaje: ${sc} de 12`, biome: 'ruins', faces: [G.P], text: sc >= 9 ? 'Los jueces dejan de comer para mirarte. Los otros tributos ya te tienen marcado.' : sc >= 6 ? 'Un puntaje respetable. Nadie te va a subestimar, pero tampoco te van a temer.' : 'Algunos jueces bostezan. Mejor: que te subestimen.', cls: sc >= 8 ? 'good' : '' });
+  const j = await ask({ tag: 'En vivo', title: 'La entrevista', biome: 'corn', faces: [G.P], text: `Luces, aplausos, el presentador con su sonrisa de plástico: "${cap(G.P.name)}, ¿qué le querés decir a la gente que te está mirando?"`, opts: [
+    { t: '"Que no vine a hacer amigos."', sub: '+ audiencia' }, { t: '"Que voy a cuidar a ' + cap(G.C.name) + ' con mi vida."', sub: '+ lealtad' }, { t: 'Hacer un chiste y que se rían todos', sub: '+ un poco de los dos' }, { t: '"Esto es para mi vieja."', sub: '++ audiencia' }] });
+  if (j === 0) fame(12); else if (j === 1) loyal(18); else { if (j === 2) { fame(6); loyal(6); } else fame(16); }
+  await tell({ tag: 'En vivo', title: ['El público ruge', `${cap(G.C.name)} te mira distinto`, 'Carcajadas', 'Silencio y aplausos'][j], biome: 'corn', faces: j === 1 ? [G.P, G.C] : [G.P], text: ['Los patrocinadores toman nota. Los demás tributos también.', 'Cuando bajás del escenario te espera con un abrazo. "Yo también, boludo."', 'Hasta el presentador se tienta. Caíste bien.', 'Alguien en primera fila llora. Los patrocinadores sacan la billetera.'][j], cls: 'good', btn: 'A la plataforma' });
+  countdown();
 }
 async function countdown() {
   BG.set(false);
@@ -202,7 +218,7 @@ function renderGame() {
   if (!G || !$('#top')) return;
   const alive = aliveT().length;
   $('#top').innerHTML = `<div><div class="day">Día ${G.day}<span class="mut" style="font-size:1.1rem"> / 6</span></div><div class="ph">${PHASES[G.phase]}</div></div><div class="spacer"></div>
-  <div class="chip" title="Tributos con vida">👥 ${alive}</div><div class="chip" title="Audiencia: con 25 o más te llegan regalos a la noche">⭐ ${G.fame}</div>${G.hazard ? `<div class="chip" style="border-color:#4a6b2a">${G.hazard.ic} ${G.hazard.n} en ${SECTORS[G.hazard.sec].n}</div>` : ''}${G.closed.length ? `<div class="chip" style="border-color:#7a2b2b">⛔ ${G.closed.length} zonas cerradas</div>` : ''}<button class="chip" id="b-menu">☰</button>`;
+  <div class="chip" title="Tributos con vida">👥 ${alive}</div><div class="chip" title="Audiencia: con 25 o más te llegan regalos a la noche">⭐ ${G.fame}</div>${G.hazard ? `<div class="chip" style="border-color:#4a6b2a">${G.hazard.ic} ${G.hazard.n} en ${SECTORS[G.hazard.sec].n}</div>` : ''}${G.allies.length ? `<div class="chip" title="Aliados">🤝 ${G.allies.map(i => G.teams[i].m.filter(t => t.alive).map(t => cap(t.name)).join('/')).join(', ')}</div>` : ''}${G.closed.length ? `<div class="chip" style="border-color:#7a2b2b">⛔ ${G.closed.length} zonas cerradas</div>` : ''}<button class="chip" id="b-menu">☰</button>`;
   const cAlive = G.C.alive;
   const acts = [['explore', '🔎', 'Explorar', 'Buscar cosas y problemas'], ['hunt', '🍖', 'Cazar', 'Conseguir comida'], ['rest', '💤', 'Descansar', 'Curarse, más expuesto'], ['hide', '🌿', 'Esconderse', 'Casi no te encuentran']];
   $('#side').innerHTML = `${whoCard(G.P, `<div class="meter hu" style="margin-top:8px"><i style="width:${G.hunger}%"></i></div><div class="ml"><span>🍖 Saciedad ${G.hunger}</span><span>${G.hunger < 25 ? '<b style="color:#ffc94a">¡Hambre!</b>' : ''}</span></div>`)}
@@ -277,7 +293,7 @@ async function act(type, arg) {
 async function endPhase(encMult = 1, ambushP = .2) {
   aiMove();
   // encuentro en tu sector
-  const here = teamsIn(G.sec);
+  const here = teamsIn(G.sec).filter(tm => !G.allies.includes(tm.id));
   if (here.length) {
     let p = (G.sec === 0 ? .8 : .55) * encMult * (teamPerk('sigilo') ? .6 : 1); if (G.forceEnc) p = 1;
     if (Math.random() < p) await encounter(pick(here), Math.random() < ambushP && !G.forceEnc);
@@ -332,6 +348,7 @@ async function checkEnd() {
   return false;
 }
 async function nightFall() {
+  for (const id of G.allies.slice()) { const tm = G.teams[id]; if (!tm.m.some(t => t.alive)) { G.allies.splice(G.allies.indexOf(id), 1); continue; } if (Math.random() < .12 + G.day * .04) { G.allies.splice(G.allies.indexOf(id), 1); addLog(`<b>${tm.m.filter(t => t.alive).map(t => cap(t.name)).join(' y ')}</b> rompieron la alianza con ustedes.`, 'k'); toast('💔 Se rompió una alianza'); } }
   if (G.hunger >= 100) ach('hambre');
   aiNightBetrayals();
   const fallen = G.fallenToday.filter(t => t !== G.P); G.fallenToday = [];
@@ -434,3 +451,13 @@ function endScreen(won, txt, winner, place) {
 }
 window.__dbg = () => G;
 screenTitle();
+// atajos de teclado
+addEventListener('keydown', e => {
+  if (e.repeat) return;
+  const cb = [...document.querySelectorAll('.combat .acts-c .btn:not([disabled])')];
+  if (cb.length && /^[1-9]$/.test(e.key)) { const b = cb[+e.key - 1]; if (b) b.click(); return; }
+  const mb = [...document.querySelectorAll('.modal [data-i]:not([disabled])')];
+  if (mb.length) { if (/^[1-9]$/.test(e.key) && mb[+e.key - 1]) mb[+e.key - 1].click(); else if ((e.key === 'Enter' || e.key === ' ') && mb.length === 1) { e.preventDefault(); mb[0].click(); } return; }
+  const k = { e: 'explore', c: 'hunt', d: 'rest', s: 'hide' }[e.key.toLowerCase()];
+  const b = k && document.querySelector(`#side [data-a="${k}"]:not([disabled])`); if (b) b.click();
+});

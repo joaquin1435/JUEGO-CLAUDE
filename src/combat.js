@@ -161,8 +161,8 @@ async function fight(allies, enemies, opt = {}) {
       cur = f; f.guard = false;
       if (f.poison > 0) { f.poison--; Parts.text(f.x, f.y - 125 * S, '☠-5', '#9cff6a'); hurt(f.t, 5); if (f.dead) { f.deadT = performance.now(); Snd.play('death'); await sleep(700); continue; } }
       if (f.stun > 0) { f.stun--; say(`${cap(f.name)} está aturdido y pierde el turno.`); await sleep(700); continue; }
-      if (f.t === G.P) {
-        say(`Tu turno, <b>${cap(f.name)}</b>.`);
+      if (f.t === G.P || (Opt.ctrl && f.side === 'A' && f.t === G.C)) {
+        say(f.t === G.P ? `Tu turno, <b>${cap(f.name)}</b>.` : `Turno de <b>${cap(f.name)}</b> (tu compañero).`);
         const ch = await playerTurn(f);
         if (ch.a === 'atk') await strike(f, target && !target.dead ? target : foes(f)[0]);
         else if (ch.a === 'pow') { f.energy -= 3; await strike(f, target && !target.dead ? target : foes(f)[0], 1.75, 'golpe fuerte'); }

@@ -65,15 +65,49 @@ const SCENES = [
     { t: 'Ir al festín', run: () => { G.feast = 1; return ['Mañana a la mañana, la Cornucopia. Si vas, conseguís algo raro seguro... y una pelea casi segura.']; } },
     { t: 'Ni loco', run: () => ['Que se maten entre ellos.'] }] },
 ];
+// escenas con personajes concretos (async)
+const lonely = () => aliveT().filter(t => t.team !== 0 && G.teams[t.team].m.filter(x => x.alive).length === 1);
+const freeTeams = () => aliveTeams().filter(tm => !tm.player && !G.allies.includes(tm.id));
+SCENES.push(
+  { b: null, title: 'Manos en alto', maxDay: 4, cond: () => G.allies.length < 2 && freeTeams().length > 1, pre: () => { G.st = pick(freeTeams()); },
+    text: () => `<b>${G.st.m.filter(t => t.alive).map(t => cap(t.name)).join('</b> y <b>')}</b> salen de entre los arbustos con las manos en alto. "Paremos un toque. Juntos llegamos más lejos."`, faces: () => G.st.m.filter(t => t.alive), opts: [
+    { t: '🤝 Aceptar la alianza', sub: 'No se van a atacar... por ahora', run: () => { G.allies.push(G.st.id); fame(3); mark(`Alianza con ${G.st.m.map(t => cap(t.name)).join(' y ')}.`); return ['Se dan la mano. Por un rato, la arena es un poco menos grande.', 'good']; } },
+    { t: '🗡️ Aceptar... y atacar cuando bajen la guardia', sub: 'Golpe gratis', run: async () => { Snd.play('betray'); const r = await fight([G.P, G.C], G.st.m, { firstStrike: true, preDmg: 14, banner: 'TRAICIÓN', intro: 'Les das la mano... y no la soltás.' }); fame(12); await afterFight(r, G.st); return null; } },
+    { t: 'Rechazar', run: () => { G.st.sec = pick(SECTORS[G.sec].adj); return ['"Ustedes se lo pierden." Se van despacio, sin darte la espalda.']; } }] },
+  { b: null, title: 'Sin dupla', minDay: 2, cond: () => lonely().length > 0, pre: () => { G.st = pick(lonely()); },
+    text: () => `<b>${cap(G.st.name)}</b> está contra un árbol, sin fuerzas y sin su dupla. Levanta la vista y te reconoce.`, faces: () => [G.st], opts: [
+    { t: '🗡️ Terminarlo', run: () => { const t = G.st, w = t.weapon; kill(t, G.P); Snd.play('cannon'); fame(6); return [`No se defiende. Un cañonazo suena a lo lejos.${w ? ' Te llevás ' + give(w) + '.' : ''}`, 'bad']; } },
+    { t: '🥫 Dejarle comida', disabled: () => !G.inv.some(i => ITEMS[i].food), run: () => { G.inv.splice(G.inv.findIndex(i => ITEMS[i].food), 1); fame(14); loyal(6); return ['Le dejás comida al lado y te vas sin decir nada. El público no se lo esperaba.', 'good']; } },
+    { t: 'Seguir de largo', run: () => ['No es asunto tuyo. Igual te quedás pensando.'] }] },
+  { b: ['field', 'mountain', 'beach', 'corn'], title: 'Un desafío', minDay: 2, cond: () => aliveT().some(t => t.team !== 0 && !G.allies.includes(t.team)), pre: () => { G.st = pick(aliveT().filter(t => t.team !== 0 && !G.allies.includes(t.team))); },
+    text: () => `Desde una loma, <b>${cap(G.st.name)}</b> grita tu nombre. "¡${cap(G.P.name)}! ¡Vos y yo, sin compañeros! ¡Que lo vea todo el mundo!"`, faces: () => [G.st], opts: [
+    { t: '⚔️ Aceptar el duelo', sub: 'Uno contra uno · mucha audiencia', run: async () => { const r = await fight([G.P], [G.st], { noflee: true, banner: 'DUELO' }); if (!G.P.alive) return null; if (r === 'win') { fame(18); mark(`Ganaste el duelo contra ${cap(G.st.name)}.`); } await afterFight(r, G.teams[G.st.team]); return null; } },
+    { t: 'Ignorarlo', run: () => { fame(-6); return ['Lo dejás gritando solo. El público abuchea.']; } }] },
+  { b: ['forest', 'swamp'], title: 'Avispas rastreadoras', text: 'Un nido gris cuelga de una rama, zumbando. Estas avispas no se olvidan de una cara.', opts: [
+    { t: 'Tirarlo hacia el sector de al lado', sub: 'Astucia', run: () => { const r = chk('ast', 10); if (r.ok) { const v = pick(aliveT().filter(t => t.team !== 0)); if (v) { hurt(v, 40, G.P); if (!v.alive) addLog(`<b>${cap(v.name)}</b> murió por las avispas`, 'k'); } fame(10); return [`Cortás la rama y sale volando. A lo lejos, gritos${v && !v.alive ? ' y un cañonazo' : ''}. ${r.s}`, 'good']; } hurt(G.P, 20); hurt(G.C, 12); return [`Se te cae encima. Corrés con la cara hinchada. -20 vida. ${r.s}`, 'bad']; } },
+    { t: 'Alejarse en silencio', run: () => ['Mejor no.'] }] },
+  { b: null, title: 'Una carta', minDay: 2, text: 'Un paracaídas chiquito con un papel doblado. Es la letra de alguien de tu casa.', opts: [
+    { t: 'Leerla', run: () => { heal(G.P, 15); return ['"Volvé." Una sola palabra. Te alcanza para seguir. +15 vida.', 'good']; } },
+    { t: 'Leerla en voz alta para los dos', disabled: () => !cAlive(), run: () => { heal(G.P, 8); heal(G.C, 8); loyal(10); return [`${C_()} se ríe y se seca los ojos con la manga. +8 vida a los dos, +lealtad.`, 'good']; } }] },
+  { b: ['mountain', 'cave', 'beach'], title: 'Frío', text: 'La temperatura baja de golpe. Te tiemblan las manos.', opts: [
+    { t: 'Prender fuego', run: () => { heal(G.P, 12); heal(G.C, 12); if (Math.random() < .5) G.forceEnc = 1; return [`Se calientan. +12 vida. ${G.forceEnc ? 'Pero el humo se ve de lejos...' : ''}`, G.forceEnc ? '' : 'good']; } },
+    { t: 'Aguantar abrazados', disabled: () => !cAlive(), run: () => { loyal(8); hurt(G.P, 4); return ['Pasan la noche espalda con espalda. Frío, pero juntos. +lealtad', 'good']; } },
+    { t: 'Aguantar', sub: 'Resistencia', run: () => { const r = chk('res', 9); if (r.ok) return [`Ni te mosqueás. ${r.s}`, 'good']; hurt(G.P, 10); return [`Te agarra fiebre. -10 vida. ${r.s}`, 'bad']; } }] },
+  { b: null, title: 'Charla', cond: () => cAlive() && G.loyalty > 55, text: () => `${C_()} rompe el silencio: "¿Te acordás cuando nos escapamos del colegio y ${cap(pick(G.all.filter(t => t !== G.P && t !== G.C)).name)} se cayó del paredón?"`, opts: [
+    { t: 'Reírse', run: () => { loyal(6); heal(G.P, 4); heal(G.C, 4); return ['Se ríen tan fuerte que tienen que taparse la boca. Por un segundo no están en la arena.', 'good']; } },
+    { t: '"Shh. Nos van a escuchar."', run: () => { loyal(-2); return ['Tiene razón. Pero se le borra la sonrisa.']; } }] },
+);
 function pickScene() {
   const b = SECTORS[G.sec].b;
-  const ok = SCENES.filter(s => (!s.b || s.b.includes(b)) && (!s.minDay || G.day >= s.minDay) && (!s.needC || G.C.alive) && (!s.cond || s.cond()) && s !== G.lastScene);
+  const ok = SCENES.filter(s => (!s.b || s.b.includes(b)) && (!s.minDay || G.day >= s.minDay) && (!s.maxDay || G.day <= s.maxDay) && (!s.needC || G.C.alive) && (!s.cond || s.cond()) && s !== G.lastScene);
   const s = pick(ok); G.lastScene = s; return s;
 }
 async function runScene(s) {
+  if (s.pre) s.pre();
   const opts = s.opts.map(o => ({ t: o.t, sub: o.sub, disabled: typeof o.disabled === 'function' ? o.disabled() : false }));
-  const i = await ask({ tag: SECTORS[G.sec].n, title: s.title, text: typeof s.text === 'function' ? s.text() : s.text, biome: SECTORS[G.sec].b, opts });
-  const [txt, cls] = s.opts[i].run();
+  const i = await ask({ tag: SECTORS[G.sec].n, title: s.title, text: typeof s.text === 'function' ? s.text() : s.text, biome: SECTORS[G.sec].b, faces: s.faces ? s.faces().map(t => ({ ...t, enemy: true })) : null, opts });
+  const out = await s.opts[i].run(); if (!out) return;
+  const [txt, cls] = out;
   Snd.play(cls === 'good' ? 'pick' : cls === 'bad' ? 'bad' : 'click');
   if (cls === 'bad') shakeEl();
   addLog(`${s.title}: ${txt.replace(/<span.*<\/span>/, '')}`);

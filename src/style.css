@@ -160,3 +160,6 @@ button{font:inherit;color:var(--txt);cursor:pointer;border:0;background:none}
 .ach{display:flex;gap:10px;align-items:center;padding:12px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
 .ach .i{font-size:1.8rem}.ach.off{opacity:.38;filter:grayscale(1)}
 @media (max-width:900px){.vs{flex-direction:column;gap:12px}}
+
+.w{opacity:0;animation:wIn .35s forwards;display:inline-block}
+@keyframes wIn{from{opacity:0;transform:translateY(4px);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}

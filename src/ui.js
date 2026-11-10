@@ -34,9 +34,14 @@ function ask(cfg) {
   return new Promise(res => {
     const m = document.createElement('div'); m.className = 'modal';
     m.innerHTML = `<div class="card scene"><canvas></canvas><div class="bd">${cfg.tag ? `<span class="tag">${cfg.tag}</span>` : ''}<h3>${cfg.title}</h3><p class="tx">${cfg.text}</p><div class="opts">${(cfg.opts || []).map((o, i) => `<button class="btn ${o.cls || ''}" data-i="${i}" ${o.disabled ? 'disabled' : ''}><span>${o.t}</span>${o.sub ? `<small>${o.sub}</small>` : ''}</button>`).join('')}</div></div></div>`;
-    document.body.appendChild(m); sceneHead(m.querySelector('canvas'), cfg.biome, cfg.faces, cfg.night); bindSfx(m);
+    document.body.appendChild(m); revealWords(m.querySelector('.tx')); sceneHead(m.querySelector('canvas'), cfg.biome, cfg.faces, cfg.night); bindSfx(m);
     m.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { m.remove(); res(+b.dataset.i); });
   });
+}
+function revealWords(el) {
+  const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), nodes = []; while (tw.nextNode()) nodes.push(tw.currentNode);
+  let i = 0; const total = nodes.reduce((s, n) => s + n.textContent.split(/\s+/).length, 0), step = Math.min(28, 900 / Math.max(1, total)) / Opt.speed;
+  nodes.forEach(n => { const f = document.createDocumentFragment(); n.textContent.split(/(\s+)/).forEach(w => { if (!w.trim()) return f.appendChild(document.createTextNode(w)); const s = document.createElement('span'); s.className = 'w'; s.style.animationDelay = (i++ * step) + 'ms'; s.textContent = w; f.appendChild(s); }); n.replaceWith(f); });
 }
 // Muestra resultado con botón continuar
 async function tell(cfg) { await ask({ ...cfg, text: `<div class="res ${cfg.cls || ''}">${cfg.text}</div>`, opts: [{ t: cfg.btn || 'Continuar', cls: 'primary' }] }); }
